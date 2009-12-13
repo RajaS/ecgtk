@@ -4,6 +4,9 @@ import scipy.signal
 import pylab
 import commands
 
+# Running the tests
+# run from a terminal "nosetests --with-doctest ecgtk.py"
+
 
 def _norm_dot_product(a,b):
     """Will return normalized dot product for two vectors"""
@@ -14,8 +17,12 @@ def _norm_dot_product(a,b):
 
 def _ms_to_samples(ms, samplingrate):
     """convert interval in ms to number of samples.
-    samplingrate is samples / second"""
-    return samplingrate * ms / 1000
+    samplingrate is samples / second
+    >>> _ms_to_samples(500, 1000)
+    500
+    >>> _ms_to_samples(100, 500)
+    50"""
+    return int(samplingrate * ms / 1000)
 
 def _lfilter_zi(b,a):
     #compute the zi state from the filter parameters. 
@@ -76,7 +83,10 @@ def filtfilt(b,a,x):
     return scipy.flipud(y[edge-1:-edge+1])
 
 def _rms(vector):
-    """returns the root mean square"""
+    """returns the root mean square
+    >>> _rms(scipy.array([1,2,3,4,5]))
+    3.3166247903553998
+    """
     return scipy.sqrt(scipy.mean(vector**2))
 
 
@@ -92,14 +102,11 @@ class ECG():
         anchorx is a vector of isoelectric points (usually qrs onset -20ms)
         window is width of window to use (in ms) for averaging the amplitude at anchors"""
         windowwidth = _ms_to_samples(window, self.samplingrate) / 2
-    
         #Do we have enough points before first anchor to use it
         if anchorx[0] < windowwidth:
             anchorx = anchorx[1:]
-
         # subtract dc
         self.ecg -= scipy.mean(self.ecg[anchorx[:]]) 
-
         # amplitudes for anchors
         # window is zero, no averaging
         if windowwidth == 0:
@@ -108,26 +115,21 @@ class ECG():
         else:
             anchory = scipy.array([scipy.mean(self.ecg[x-windowwidth:x+windowwidth])
                                    for x in anchorx])
-            
         # x values for spline that we are going to calculate
         splinex = scipy.array(range(len(self.ecg)))
-
         # calculate cubic spline fit
         tck = scipy.interpolate.splrep(anchorx, anchory)
         spliney = scipy.interpolate.splev(splinex, tck)
-
         # subtract the spline
         self.ecg -= spliney
-    
         return
-    
 
         def write_ann(self, annfile):
             """Write an annotation file for the QRS onsets in a format
             that is usable with wrann"""
             fi = open(annfile, 'w')
             for qrspeak in self.QRSpeaks:
-                fi.write('%s %s %s %s %s %s\n' %(self._sample_to_time(qrspeak), qrspeak, 'N', 0, 0, 0))
+                fi.write('%s '*4 + '%s\n' %(self._sample_to_time(qrspeak), qrspeak, 'N', 0, 0, 0))
             fi.close()
 
 
@@ -135,20 +137,16 @@ def test_remove_baseline():
     """test for remove_baseline function
     """
     testsignal = scipy.sin(scipy.arange(0,2*scipy.pi,0.01))
-    npoints = len(testsignal)
-    pylab.plot(testsignal, 'b')
 
+    npoints = len(testsignal)
     anchors = range(0,len(testsignal), len(testsignal)//8)
     window = 0
 
     ecg = ECG(testsignal, 1)
     rms_with_baseline = _rms(ecg.ecg)
-
     ecg.remove_baseline(anchors, window)
     rms_without_baseline = _rms(ecg.ecg)
-
     assert rms_without_baseline / rms_with_baseline < 0.01
-
 
 if __name__ == '__main__':
     test_remove_baseline()
