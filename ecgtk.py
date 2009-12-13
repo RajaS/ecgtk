@@ -1,11 +1,9 @@
 from __future__ import division
 import scipy
 import scipy.signal
-import pylab
-import commands
-
+import datetime
 # Running the tests
-# run from a terminal "nosetests --with-doctest ecgtk.py"
+# run from a terminal "nosetests -v --with-doctest ecgtk.py"
 
 
 def _norm_dot_product(a,b):
@@ -23,6 +21,27 @@ def _ms_to_samples(ms, samplingrate):
     >>> _ms_to_samples(100, 500)
     50"""
     return int(samplingrate * ms / 1000)
+
+def _samples_to_ms(samples, samplingrate):
+    """convert an interval in samples to
+    time in ms. samplingrate is samples/second.
+    >>> _samples_to_ms(500, 1000)
+    500
+    >>> _samples_to_ms(50, 500)
+    100
+    """
+    return int(samples * 1000 / samplingrate)
+
+def _format_time_wfdb(ms):
+    """convert time in ms to format compatible with rdann.
+    This is in the form (hh):mm:ss.sss
+    >>> _format_time_wfdb(7322002)
+    '02:02:02.002'
+    """
+    hr, minute = ms//3600000 % 24, ms//60000 % 60
+    sec, ms = ms//1000 % 60, ms % 1000
+    timeobj = datetime.time(hr, minute, sec, ms*1000) # last val is microsecs
+    return timeobj.isoformat()[:-3] # back to ms
 
 def _lfilter_zi(b,a):
     #compute the zi state from the filter parameters. 
@@ -89,6 +108,31 @@ def _rms(vector):
     """
     return scipy.sqrt(scipy.mean(vector**2))
 
+def _zeropad(shortvec, l):
+    """Pad the vector shortvec with terminal zeros to length l
+    >>> _zeropad(scipy.array([1,2,3,4,5]), 10)
+    array([1, 2, 3, 4, 5, 0, 0, 0, 0, 0])
+    """
+    return scipy.hstack((shortvec, scipy.zeros((l - len(shortvec)), dtype='int')))
+
+def _sample_to_time(self, sample):
+        """convert from sample number to a string representing
+        time in a format required for the annotation file.
+        This is in the form (hh):mm:ss.sss"""
+        time_ms = int(sample*1000 / self.samplingrate)
+        hr, min, sec, ms = time_ms//3600000 % 24, time_ms//60000 % 60, \
+                           time_ms//1000 % 60, time_ms % 1000
+        timeobj = datetime.time(hr, min, sec, ms*1000) # last val is microsecs
+        return timeobj.isoformat()[:-3] # back to ms
+
+def _write_ann(self, qrs_peaks, annfile):
+    """Write an annotation file for the QRS onsets in a format
+    that is usable with wrann. qrspeaks is in samples"""
+    fi = open(annfile, 'w')
+    for qrs in qrs_peaks:
+        fi.write('%s '*5 + '%s\n' %(_format_time_wfdb(_sample_to_ms(qrs)),
+                                    qrs, 'N', 0, 0, 0))
+    fi.close()
 
 class ECG():
     def __init__(self, ecg, samplingrate = 1000):
