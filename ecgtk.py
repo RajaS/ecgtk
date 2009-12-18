@@ -115,16 +115,6 @@ def _zeropad(shortvec, l):
     """
     return scipy.hstack((shortvec, scipy.zeros((l - len(shortvec)), dtype='int')))
 
-def _sample_to_time(self, sample):
-        """convert from sample number to a string representing
-        time in a format required for the annotation file.
-        This is in the form (hh):mm:ss.sss"""
-        time_ms = int(sample*1000 / self.samplingrate)
-        hr, min, sec, ms = time_ms//3600000 % 24, time_ms//60000 % 60, \
-                           time_ms//1000 % 60, time_ms % 1000
-        timeobj = datetime.time(hr, min, sec, ms*1000) # last val is microsecs
-        return timeobj.isoformat()[:-3] # back to ms
-
 def _write_ann(self, qrs_peaks, annfile):
     """Write an annotation file for the QRS onsets in a format
     that is usable with wrann. qrspeaks is in samples"""
