@@ -13,7 +13,6 @@ original wfdb applications for simplicity.
 # available at http://physionet.org/physiotools/matlab/rddata.m
 
 from __future__ import division
-import os
 import numpy
 import pylab
 
@@ -35,8 +34,10 @@ def rdsamp(record, start=0, end=-1, interval=-1, timecol=True):
     # establish start and end in samples
     start, end = _get_read_limits(start, end, interval, samp_freq, samp_count)
     # read the data
-    data = _read_data(record)
-
+    data = _read_data(record, start, end, samp_freq,
+                      zerovalues, firstvalues, gains, timecol)
+    return data
+    
 def _read_header(record):
     """Read the headerfile for the record"""
     headerfile = record + '.hea'
@@ -50,7 +51,7 @@ def _read_header(record):
     
     # load signal attributes
     # TODO: more robust parsing 
-    for i in range(signal_count):
+    for i in range(int(signal_count)):
         (filename,
          format_name,                 # should be 212
          gain,                        # Integers per mV
@@ -69,7 +70,7 @@ def _read_header(record):
         zerovalues.append(int(zerovalue))
         firstvalues.append(int(firstvalue))
     fid.close()
-    return (samp_freq, samp_count, gains,
+    return (int(samp_freq), int(samp_count), gains,
             zerovalues, firstvalues)
 
 def _get_read_limits(start, end, interval, samp_freq, samp_count):
@@ -90,139 +91,59 @@ def _get_read_limits(start, end, interval, samp_freq, samp_count):
         end = samp_count
     if end < start:       # if end is before start, swap them
         start, end = end, start
-    end = min(end, start + interval*samp_freq, samp_count) # use earlier end
+    interval_end = start + interval * samp_freq # end determined by interval
+    if interval_end < start:
+        interval_end = samp_count
+    end = min(end, interval_end, samp_count) # use earlier end
     return start, end
-
             
-def _read_data(record, start, end, samp_freq):
+def _read_data(record, start, end, samp_freq,
+               zerovalues, firstvalues, gains, timecol):
     """Read the binary data for each signal"""
     datfile = record + '.dat'
-    fid = open(datfile, 'rb')
     # read into an array with 3 bytes in each row
+    fid = open(datfile, 'rb')
+    # todo: read data only from start
     arr = numpy.fromstring(fid.read(3*end),
                 dtype=numpy.uint8).reshape((end, 3))
+    fid.close()
     # bit operations to get the 12-bit data
     second_col = arr[:, 1].astype('int')
     bytes1 = second_col & 15 # bytes belonging to first sample
     bytes2 = second_col >> 4 # belongs to second sample
     sign1 = (second_col & 8) << 9 # sign bit for first sample
     sign2 = (second_col & 128) << 5 # sign bit for second sample
+    # data has columns - time, signal1 and signal2
+    data = numpy.zeros((end, 3), dtype='int')
+    data[:, 1] = (bytes1 << 8) + arr[:, 0] - sign1
+    data[:, 2] = (bytes2 << 8) + arr[:, 2] - sign2
+    # verify with first value
+    if [data[0, 1], data[0, 2]] != firstvalues:
+        raise ValueError, 'First value does not match' #TODO: warning
+    # adjust zerovalue and gain
+    data[:, 1] -= zerovalues[0] / gains[0]
+    data[:, 2] -= zerovalues[1] / gains[1]
+    time = numpy.arange(end) *1000 // samp_freq # in ms
+    if timecol:
+        data[:, 0] = time
+    else:
+        data[:, 0] = numpy.arange(end)
+    return data
         
-        self.data = numpy.zeros((self.sampleend, 2), dtype=numpy.uint16)
-        self.data[:, 0] = (bytes1 << 8) + arr[:, 0] - sign1
-        self.data[:, 1] += (bytes2 << 8) + arr[:, 2] - sign2
-        # verify with first value
-        if [self.data[0, 0], self.data[0, 1]] != self.firstvalue:
-            raise ValueError, 'First value does not match' #TODO: warning
-        # adjust zerovalue and gain
-        self.data[:, 0] -= self.zerovalue[0] / self.gain[0]
-        self.data[:, 1] -= self.zerovalue[1] / self.gain[1]
-        self.time = numpy.arange(self.sampleend) / self.samp_rate
-
-
-    def plot_data(self):
-        """Plot the signals"""
-        pylab.subplot(211)
-        pylab.plot(self.time, self.data[:, 0], 'k')
-        pylab.subplot(212)
-        pylab.plot(self.time, self.data[:, 1], 'k')
-        pylab.show()
-
+def plot_data(data, ann=None):
+    """Plot the signals"""
+    time = data[:, 0]
+    pylab.subplot(211)
+    pylab.plot(time, data[:, 1], 'k')
+    pylab.subplot(212)
+    pylab.plot(time, data[:, 2], 'k')
+    pylab.show()
 
 
 def test():
-    record = Record212('100.dat', 0, 10)
+    data = rdsamp('/data/Dropbox/programming/ECGtk/samples/format212/100', 1, 7)
+    plot_data(data)
     
 if __name__ == '__main__':
     test()
         
-# case 1
-#     M( : , 1) = (M( : , 1) - zerovalue(1));
-#     M( : , 2) = (M( : , 2) - zerovalue(1));
-#     M = M';
-#     M(1) = [];
-#     sM = size(M);
-#     sM = sM(2)+1;
-#     M(sM) = 0;
-#     M = M';
-#     M = M/gain(1);
-#     TIME = (0:2*(SAMPLEEND_2)-1)/sfreq;
-# otherwise 
-#     disp('Error: Sorting Algorithm For > 2 Signals Not Programmed Yet!');
-# end;
-# clear A M1H M2H PRR PRL;
-# %**************************************************************************
-# % Load Attributes Data
-# %**************************************************************************
-# atrd = fullfile(PATH, ATRFILE);
-# fid3 = fopen(atrd,'r');
-# A = fread(fid3, [2, inf], 'uint8')';
-# fclose(fid3);
-# ATRTIME = [];
-# ANNOT = [];
-# sa = size(A);
-# saa = sa(1);
-# i = 1;
-# while i <= saa
-#     annoth = bitshift(A(i,2),-2);
-#     if annoth == 59
-#         ANNOT = [ANNOT;bitshift(A(i + 3,2),-2)];
-#         ATRTIME = [ATRTIME;A(i+2,1) + bitshift(A(i + 2,2),8) +...
-#                 bitshift(A(i + 1,1),16) + bitshift(A(i + 1,2),24)];
-#         i = i + 3;
-#     elseif annoth == 60
-#     elseif annoth == 61
-#     elseif annoth == 62
-#     elseif annoth == 63
-#         hilfe = bitshift(bitand(A(i,2),3),8) + A(i,1);
-#         hilfe = hilfe + mod(hilfe,2);
-#         i = i + hilfe/2;
-#     else
-#         ATRTIME = [ATRTIME;bitshift(bitand(A(i,2),3),8) + A(i,1)];
-#         ANNOT = [ANNOT;bitshift(A(i,2),-2)];
-#    end;
-#    i = i + 1;
-# end;
-# ANNOT(length(ANNOT)) = [];                  % Last Line = EOF (= 0)
-# ATRTIME(length(ATRTIME)) = [];              % Last Line = EOF
-# clear A;
-# ATRTIME = (cumsum(ATRTIME))/sfreq;
-# ind = find(ATRTIME <= TIME(end));
-# ATRTIMED = ATRTIME(ind);
-# ANNOT = round(ANNOT);
-# ANNOTD = ANNOT(ind);
-# %**************************************************************************
-# % Manipulate Data So We Only Look At What The User Wants
-# %**************************************************************************
-# ECG_1_Temp = M(:,1);
-# ECG_1 = ECG_1_Temp(SAMPLESTART_2 : SAMPLEEND_2);
-# if nosig == 2
-#     ECG_2_Temp = M(:,2);
-#     ECG_2 = ECG_2_Temp(SAMPLESTART_2 : SAMPLEEND_2);
-# end;
-# Time_Adjusted = TIME(SAMPLESTART_2 : SAMPLEEND_2);
-# %**************************************************************************
-# % Display Data
-# %**************************************************************************
-# figure(1); clf, box on, hold on
-# plot(Time_Adjusted, ECG_1,'r');
-# if nosig == 2
-#     plot(Time_Adjusted, ECG_2,'b');
-# end;
-# for k = 1:length(ATRTIMED)
-#     text(ATRTIMED(k),0,num2str(ANNOTD(k)));
-# end;
-# xlim([Time_Adjusted(1), Time_Adjusted(end)]);
-# xlabel('Time (Seconds)'); ylabel('Voltage (mV)');
-# string = ['ECG Signal ',DATAFILE];
-# title(string);
-# fprintf(1,'\\n$> DISPLAYING DATA FINISHED \n');
-# %**************************************************************************
-# % Output Data File Into Current Working Directory
-# %**************************************************************************
-# save(strcat(FILE,'_ECG_',SAMPLESTART,'_',SAMPLEEND) ...
-#     , 'ECG_1' , 'ECG_2' , 'Time_Adjusted');
-# fprintf(1,'\\n$> ALL FINISHED \n');
-# %**************************************************************************
-# % End Of Code
-# %**************************************************************************
