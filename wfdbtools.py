@@ -45,8 +45,8 @@ class Record212():
             self.samplestart = 0
             self.sampleend = self.samp_ct
 
-        # load the binary data
-        self.load_data()
+        # read the binary data
+        self.read_data()
 
         # plot data
         self.plot_data()
@@ -100,7 +100,7 @@ class Record212():
             self.firstvalue.append(int(firstvalue))
         fi.close()
             
-    def load_data(self):
+    def read_data(self):
         """Read the binary data for each signal"""
         fi = open(self.datafile, 'rb')
         # read into an array with 3 bytes in each row
