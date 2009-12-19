@@ -101,35 +101,49 @@ def _read_data(record, start, end, samp_freq,
                zerovalues, firstvalues, gains, timecol):
     """Read the binary data for each signal"""
     datfile = record + '.dat'
+    samp_to_read = end - start
+
+    # verify against first value in header
+    fid = open(datfile, 'rb')
+    data = _arr_to_data(numpy.fromstring(fid.read(3),
+                        dtype=numpy.uint8).reshape(1,3))
+    fid.close()
+    if [data[0, 1], data[0, 2]] != firstvalues:
+        raise ValueError, 'First value does not match' #TODO: warning
+    
     # read into an array with 3 bytes in each row
     fid = open(datfile, 'rb')
-    # todo: read data only from start
-    arr = numpy.fromstring(fid.read(3*end),
-                dtype=numpy.uint8).reshape((end, 3))
+    fid.seek(start*3)
+    arr = numpy.fromstring(fid.read(3*samp_to_read),
+                dtype=numpy.uint8).reshape((samp_to_read, 3))
     fid.close()
-    # bit operations to get the 12-bit data
+    data = _arr_to_data(arr)
+
+    # adjust zerovalue and gain
+    data[:, 1] -= zerovalues[0] / gains[0]
+    data[:, 2] -= zerovalues[1] / gains[1]
+    time = numpy.arange(samp_to_read) *1000 // samp_freq # in ms
+    if timecol:
+        data[:, 0] = time
+    else:
+        data[:, 0] = numpy.arange(end)
+    return data
+
+def _arr_to_data(arr):
+    """From the numpy array read from file
+    using bit level operations,
+    extract the 12-bit data"""
     second_col = arr[:, 1].astype('int')
     bytes1 = second_col & 15 # bytes belonging to first sample
     bytes2 = second_col >> 4 # belongs to second sample
     sign1 = (second_col & 8) << 9 # sign bit for first sample
     sign2 = (second_col & 128) << 5 # sign bit for second sample
     # data has columns - time, signal1 and signal2
-    data = numpy.zeros((end, 3), dtype='int')
+    data = numpy.zeros((arr.shape[0], 3), dtype='int')
     data[:, 1] = (bytes1 << 8) + arr[:, 0] - sign1
     data[:, 2] = (bytes2 << 8) + arr[:, 2] - sign2
-    # verify with first value
-    if [data[0, 1], data[0, 2]] != firstvalues:
-        raise ValueError, 'First value does not match' #TODO: warning
-    # adjust zerovalue and gain
-    data[:, 1] -= zerovalues[0] / gains[0]
-    data[:, 2] -= zerovalues[1] / gains[1]
-    time = numpy.arange(end) *1000 // samp_freq # in ms
-    if timecol:
-        data[:, 0] = time
-    else:
-        data[:, 0] = numpy.arange(end)
     return data
-        
+
 def plot_data(data, ann=None):
     """Plot the signals"""
     time = data[:, 0]
