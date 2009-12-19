@@ -13,6 +13,7 @@ original wfdb applications for simplicity.
 # available at http://physionet.org/physiotools/matlab/rddata.m
 
 from __future__ import division
+import warnings
 import numpy
 import pylab
 
@@ -109,7 +110,7 @@ def _read_data(record, start, end, samp_freq,
                         dtype=numpy.uint8).reshape(1,3))
     fid.close()
     if [data[0, 1], data[0, 2]] != firstvalues:
-        raise ValueError, 'First value does not match' #TODO: warning
+        warnings.warn('First value does not match')
     
     # read into an array with 3 bytes in each row
     fid = open(datfile, 'rb')
@@ -155,7 +156,7 @@ def plot_data(data, ann=None):
 
 
 def test():
-    data = rdsamp('/data/Dropbox/programming/ECGtk/samples/format212/100', 1, 7)
+    data = rdsamp('/data/Dropbox/programming/ECGtk/samples/format212/100')
     plot_data(data)
     
 if __name__ == '__main__':
