@@ -29,6 +29,7 @@ def rdsamp(record, start=0, end=-1, interval=-1, timecol=True):
     If timecol is True (default), elapsed time in seconds is first column.
     If timecol is False, sample number is given instead of elapsed time.
     """
+    # TODO: implement ability to read 
     # read the header file
     (samp_freq, samp_count, gains,
      zerovalues, firstvalues) = _read_header(record)
@@ -38,7 +39,53 @@ def rdsamp(record, start=0, end=-1, interval=-1, timecol=True):
     data = _read_data(record, start, end, samp_freq,
                       zerovalues, firstvalues, gains, timecol)
     return data
-    
+
+
+def rdann(record, annotator, start=0, end=-1, type=None, subtype=None):
+    """Read the annotation for given record by the annotator.
+    record is path to record, no extension.
+    annotator is the name of annotator, eg. 'atr'.
+    Optional start and end are in seconds
+    and specify interval when annot should be read.
+    type and subtype allow specific annotations to be selected
+    """
+    annfile = record + '.' + annotator
+    fid = open(annfile, 'rb')
+    arr = numpy.fromstring(fid.read(), dtype = numpy.uint8).reshape((-1, 2))
+    fid.close()
+
+    rows = arr.shape[0]
+    annot = []
+    annot_time = []
+    i = 0
+    while i < 30:
+       anntype = arr[i, 1] >> 2
+       if anntype == 59:
+           annot.append(arr[i+3, 1] >> 2)
+           annot_time.append(arr[i+2, 0] + (arr[i+2, 1] << 8) +
+                             (arr[i+1, 0] << 16) + arr[i+1, 1] << 24)
+           i += 3
+       elif anntype in [60, 61, 62, 63]:
+           hilfe = arr[i, 0] + ((arr[i, 1] & 3) << 8)
+           hilfe += hilfe % 2
+           print 'hilfe', hilfe
+           i += hilfe / 2
+       else:
+           annot_time.append(arr[i, 0] + ((arr[i, 1] & 3) << 8))
+           annot.append(arr[i, 1] >> 2)
+       i += 1
+
+    annot_time = numpy.cumsum(annot_time)
+
+def plot_data(data, ann=None):
+    """Plot the signals"""
+    time = data[:, 0]
+    pylab.subplot(211)
+    pylab.plot(time, data[:, 1], 'k')
+    pylab.subplot(212)
+    pylab.plot(time, data[:, 2], 'k')
+    pylab.show()
+
 def _read_header(record):
     """Read the headerfile for the record"""
     headerfile = record + '.hea'
@@ -110,7 +157,7 @@ def _read_data(record, start, end, samp_freq,
                         dtype=numpy.uint8).reshape(1,3))
     fid.close()
     if [data[0, 1], data[0, 2]] != firstvalues:
-        warnings.warn('First value does not match')
+        warnings.warn('First value read from dat file does not match value in header')
     
     # read into an array with 3 bytes in each row
     fid = open(datfile, 'rb')
@@ -145,19 +192,13 @@ def _arr_to_data(arr):
     data[:, 2] = (bytes2 << 8) + arr[:, 2] - sign2
     return data
 
-def plot_data(data, ann=None):
-    """Plot the signals"""
-    time = data[:, 0]
-    pylab.subplot(211)
-    pylab.plot(time, data[:, 1], 'k')
-    pylab.subplot(212)
-    pylab.plot(time, data[:, 2], 'k')
-    pylab.show()
 
 
 def test():
-    data = rdsamp('/data/Dropbox/programming/ECGtk/samples/format212/100')
-    plot_data(data)
+    #data = rdsamp('/data/Dropbox/programming/ECGtk/samples/format212/100')
+    #plot_data(data)
+    rdann('/data/Dropbox/programming/ECGtk/samples/format212/100', 'atr')
+    
     
 if __name__ == '__main__':
     test()
