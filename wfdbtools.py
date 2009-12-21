@@ -29,17 +29,14 @@ def rdsamp(record, start=0, end=-1, interval=-1):
     Elapsed time in samples is in first column of output.
     Elapsed time in milliseconds is second column.
     """
-    # TODO: implement ability to read 
-    # read the header file
-    (samp_freq, samp_count, gains,
-     zerovalues, firstvalues) = _read_header(record)
+    #TODO: check if output in mV is accurate
+    # read the header file - output is a dict
+    info = _read_header(record)
     # establish start and end in samples
-    start, end = _get_read_limits(start, end, interval, samp_freq, samp_count)
+    start, end = _get_read_limits(start, end, interval, info) 
     # read the data
-    data = _read_data(record, start, end, samp_freq,
-                      zerovalues, firstvalues, gains)
-    return data
-
+    data = _read_data(record, start, end, info) 
+    return data, info
 
 def rdann(record, annotator, start=0, end=-1):
     """Read the annotation for given record by the annotator.
@@ -54,8 +51,7 @@ def rdann(record, annotator, start=0, end=-1):
     and annotations code in third column
     """
     # get header data
-    (samp_freq, samp_count, gains,
-                   zerovalues, firstvalues) = _read_header(record)
+    info = _read_header(record)
     
     annfile = record + '.' + annotator
     fid = open(annfile, 'rb')
@@ -83,18 +79,19 @@ def rdann(record, annotator, start=0, end=-1):
         i += 1
     # annot_time should be total elapsed samples
     annot_time = numpy.cumsum(annot_time)
-    annot_time_ms = annot_time * 1000 // samp_freq
+    annot_time_ms = annot_time * 1000 // info['samp_freq']
     # limit to requested interval
-    start, end = _get_read_limits(start, end, -1, samp_freq, samp_count)
+    start, end = _get_read_limits(start, end, -1, info)
     ann = numpy.array([annot_time, annot_time_ms, annot]).transpose()
     # filter by annot_time in interval
     ann =  ann[start <= ann[:, 0]]
     ann = ann[ann[:, 0] <= end]
     return ann
     
-def plot_data(data, ann=None):
+def plot_data(data, info, ann=None):
     """Plot the signals"""
-    time = data[:, 1] # used data[:, 2] to use sample no.
+    # TODO: check if ann has been given
+    time = data[:, 1] # use data[:, 2] to use sample no.
     pylab.subplot(211)
     pylab.plot(time, data[:, 2], 'k')
     pylab.plot(ann[:, 1], data[ann[:, 2], 2], 'xr')
@@ -106,10 +103,14 @@ def plot_data(data, ann=None):
 def _read_header(record):
     """Read the headerfile for the record"""
     headerfile = record + '.hea'
-    gains = []; zerovalues = []; firstvalues = []
+    info = {}
+    info['gains'] = []; info['zerovalues'] = []
+    info['firstvalues'] = []; info['signal_names'] = []
     fid = open(headerfile, 'r')
     firstline = fid.readline()
     recordname, signal_count, samp_freq, samp_count = firstline.split()
+    info['samp_freq'] = int(samp_freq)
+    info['samp_count'] = int(samp_count)
     # Number of signal must be exactly 2
     if int(signal_count) != 2:
         raise ValueError, 'Input data must have exactly 2 signals'
@@ -131,14 +132,14 @@ def _read_header(record):
         if format_name != '212':
             raise ValueError, 'Not in format 212'
         
-        gains.append(int(gain))
-        zerovalues.append(int(zerovalue))
-        firstvalues.append(int(firstvalue))
+        info['gains'].append(int(gain))
+        info['zerovalues'].append(int(zerovalue))
+        info['firstvalues'].append(int(firstvalue))
+        info['signal_names'].append(signal_name)
     fid.close()
-    return (int(samp_freq), int(samp_count), gains,
-            zerovalues, firstvalues)
+    return info
 
-def _get_read_limits(start, end, interval, samp_freq, samp_count):
+def _get_read_limits(start, end, interval, info):
     """
     Given start time, end time and interval
     for reading data, determine limits to use.
@@ -147,23 +148,22 @@ def _get_read_limits(start, end, interval, samp_freq, samp_count):
     If both end and interval are given, choose
     earlier limit of two.
     """
-    start *= samp_freq
-    end *= samp_freq
+    start *= info['samp_freq']
+    end *= info['samp_freq']
     
     if start < 0:         # If start is negative, start at 0
         start = 0
     if end < 0:           # if end is negative, use end of record
-        end = samp_count
+        end = info['samp_count']
     if end < start:       # if end is before start, swap them
         start, end = end, start
-    interval_end = start + interval * samp_freq # end determined by interval
+    interval_end = start + interval * info['samp_freq'] # end determined by interval
     if interval_end < start:
-        interval_end = samp_count
-    end = min(end, interval_end, samp_count) # use earlier end
+        interval_end = info['samp_count']
+    end = min(end, interval_end, info['samp_count']) # use earlier end
     return start, end
             
-def _read_data(record, start, end, samp_freq,
-               zerovalues, firstvalues, gains):
+def _read_data(record, start, end, info):
     """Read the binary data for each signal"""
     datfile = record + '.dat'
     samp_to_read = end - start
@@ -173,7 +173,7 @@ def _read_data(record, start, end, samp_freq,
     data = _arr_to_data(numpy.fromstring(fid.read(3),
                         dtype=numpy.uint8).reshape(1,3))
     fid.close()
-    if [data[0, 2], data[0, 3]] != firstvalues:
+    if [data[0, 2], data[0, 3]] != info['firstvalues']:
         warnings.warn('First value from dat file does not match value in header')
     
     # read into an array with 3 bytes in each row
@@ -185,17 +185,16 @@ def _read_data(record, start, end, samp_freq,
     data = _arr_to_data(arr)
 
     # adjust zerovalue and gain
-    data[:, 2] -= zerovalues[0] / gains[0]
-    data[:, 3] -= zerovalues[1] / gains[1]
-    time = numpy.arange(samp_to_read) *1000 // samp_freq # in ms
+    data[:, 2] -= info['zerovalues'][0] / info['gains'][0]
+    data[:, 3] -= info['zerovalues'][1] / info['gains'][1]
+    time = numpy.arange(samp_to_read) *1000 // info['samp_freq'] # in ms
     data[:, 0] = numpy.arange(start, end) + start
-    data[:, 1] = time + (start * 1000 // samp_freq)
+    data[:, 1] = time + (start * 1000 // info['samp_freq'])
     return data
 
 def _arr_to_data(arr):
-    """From the numpy array read from file
-    using bit level operations,
-    extract the 12-bit data"""
+    """From the numpy array read from the dat file
+    using bit level operations, extract the 12-bit data"""
     second_col = arr[:, 1].astype('int')
     bytes1 = second_col & 15 # bytes belonging to first sample
     bytes2 = second_col >> 4 # belongs to second sample
@@ -208,10 +207,14 @@ def _arr_to_data(arr):
     return data
 
 def test():
-    data = rdsamp('/data/Dropbox/programming/ECGtk/samples/format212/100', 1, 10)
-    ann = rdann('/data/Dropbox/programming/ECGtk/samples/format212/100', 'atr', 1, 10)
+    record  = '/data/Dropbox/programming/ECGtk/samples/format212/100'
+    data, info = rdsamp(record, 0, 10)
+    ann = rdann(record, 'atr', 0, 10)
+    print data
+    print ann
+    print info
 
-    plot_data(data, ann)
+    plot_data(data, info, ann)
     
     
 if __name__ == '__main__':
