@@ -117,11 +117,11 @@ def _read_header(record):
     
     # load signal attributes
     # TODO: more robust parsing 
-    for i in range(int(signal_count)):
-        (filename,
+    for line_count in range(int(signal_count)):
+        (dummy,                       # filename
          format_name,                 # should be 212
          gain,                        # Integers per mV
-         bitres,                      # Bit Resolution
+         dummy,                       # Bit Resolution
          zerovalue,                   # value of zero point
          firstvalue,                  # First value of signal
          dummy,
@@ -157,7 +157,7 @@ def _get_read_limits(start, end, interval, info):
         end = info['samp_count']
     if end < start:       # if end is before start, swap them
         start, end = end, start
-    interval_end = start + interval * info['samp_freq'] # end determined by interval
+    interval_end = start + interval * info['samp_freq'] # end det by interval
     if interval_end < start:
         interval_end = info['samp_count']
     end = min(end, interval_end, info['samp_count']) # use earlier end
@@ -174,7 +174,8 @@ def _read_data(record, start, end, info):
                         dtype=numpy.uint8).reshape(1,3))
     fid.close()
     if [data[0, 2], data[0, 3]] != info['firstvalues']:
-        warnings.warn('First value from dat file does not match value in header')
+        warnings.warn(
+            'First value from dat file does not match value in header')
     
     # read into an array with 3 bytes in each row
     fid = open(datfile, 'rb')
@@ -207,6 +208,7 @@ def _arr_to_data(arr):
     return data
 
 def test():
+    """Run some tests"""
     record  = '/data/Dropbox/programming/ECGtk/samples/format212/100'
     data, info = rdsamp(record, 0, 10)
     ann = rdann(record, 'atr', 0, 10)
