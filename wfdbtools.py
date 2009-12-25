@@ -173,6 +173,7 @@ def _read_data(record, start, end, info):
     data = _arr_to_data(numpy.fromstring(fid.read(3),
                         dtype=numpy.uint8).reshape(1,3))
     fid.close()
+
     if [data[0, 2], data[0, 3]] != info['firstvalues']:
         warnings.warn(
             'First value from dat file does not match value in header')
@@ -186,8 +187,8 @@ def _read_data(record, start, end, info):
     data = _arr_to_data(arr)
 
     # adjust zerovalue and gain
-    data[:, 2] -= info['zerovalues'][0] / info['gains'][0]
-    data[:, 3] -= info['zerovalues'][1] / info['gains'][1]
+    data[:, 2] = (data[:, 2] - info['zerovalues'][0]) / info['gains'][0]
+    data[:, 3] = (data[:, 3] - info['zerovalues'][1]) / info['gains'][1]
     time = numpy.arange(samp_to_read) *1000 // info['samp_freq'] # in ms
     data[:, 0] = numpy.arange(start, end) + start
     data[:, 1] = time + (start * 1000 // info['samp_freq'])
@@ -202,7 +203,7 @@ def _arr_to_data(arr):
     sign1 = (second_col & 8) << 9 # sign bit for first sample
     sign2 = (second_col & 128) << 5 # sign bit for second sample
     # data has columns - samples, time(ms), signal1 and signal2
-    data = numpy.zeros((arr.shape[0], 4), dtype='int')
+    data = numpy.zeros((arr.shape[0], 4), dtype='float')
     data[:, 2] = (bytes1 << 8) + arr[:, 0] - sign1
     data[:, 3] = (bytes2 << 8) + arr[:, 2] - sign2
     return data
