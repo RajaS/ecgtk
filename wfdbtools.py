@@ -17,6 +17,56 @@ import warnings
 import numpy
 import pylab
 
+## Annotation codes
+CODEDICT = {
+    0 : 'NOTQRS',	# not-QRS (not a getann/putann codedict) */
+    1 : 'NORMAL',	# normal beat */
+    2 : 'LBBB',	# left bundle branch block beat */
+    3 : 'RBBB',	# right bundle branch block beat */
+    4 : 'ABERR',	# aberrated atrial premature beat */
+    5 : 'PVC',	# premature ventricular contraction */
+    6 : 'FUSION',	# fusion of ventricular and normal beat */
+    7 : 'NPC',	# nodal (junctional) premature beat */
+    8 : 'APC',	# atrial premature contraction */
+    9 : 'SVPB',	# premature or ectopic supraventricular beat */
+    10 : 'VESC',	# ventricular escape beat */
+    11 : 'NESC',	# nodal (junctional) escape beat */
+    12 : 'PACE',	# paced beat */
+    13 : 'UNKNOWN',	# unclassifiable beat */
+    14 : 'NOISE',	# signal quality change */
+    16 : 'ARFCT',	# isolated QRS-like artifact */
+    18 : 'STCH',	# ST change */
+    19 : 'TCH',	# T-wave change */
+    20 : 'SYSTOLE',	# systole */
+    21 : 'DIASTOLE',	# diastole */
+    22 : 'NOTE',	# comment annotation */
+    23 : 'MEASURE',	# measurement annotation */
+    24 : 'PWAVE',	# P-wave peak */
+    25 : 'BBB',	# left or right bundle branch block */
+    26 : 'PACESP',	# non-conducted pacer spike */
+    27 : 'TWAVE',	# T-wave peak */
+    28 : 'RHYTHM',	# rhythm change */
+    29 : 'UWAVE',	# U-wave peak */
+    30 : 'LEARN',	# learning */
+    31 : 'FLWAV',	# ventricular flutter wave */
+    32 : 'VFON',	# start of ventricular flutter/fibrillation */
+    33 : 'VFOFF',	# end of ventricular flutter/fibrillation */
+    34 : 'AESC',	# atrial escape beat */
+    35 : 'SVESC',	# supraventricular escape beat */
+    36 : 'LINK',	# link to external data (aux contains URL) */
+    37 : 'NAPC',	# non-conducted P-wave (blocked APB) */
+    38 : 'PFUS',	# fusion of paced and normal beat */
+    39 : 'WFON',	# waveform onset */
+    #WFON : 'PQ',	# PQ junction (beginning of QRS) */
+    40 : 'WFOFF',	# waveform end */
+    #WFOFF : 'JPT',	# J point (end of QRS) */
+    41 : 'RONT'	# R-on-T premature ventricular contraction */
+    }
+
+
+
+
+
 def rdsamp(record, start=0, end=-1, interval=-1):
     """
     Read signals from a format 212 record from Physionet database.
@@ -28,7 +78,7 @@ def rdsamp(record, start=0, end=-1, interval=-1):
     Parameters
     ----------
     record : str
-            name of record without extension
+            Full path to record. No extension to be used for record name.
     start  : int, optional
             time to begin in seconds, default 0
     end    : int, optional
@@ -47,10 +97,13 @@ def rdsamp(record, start=0, end=-1, interval=-1):
           Signal amplitude is in physical units (mV)          
     info : dict
           Dictionary containing header information
-
-    Examples
-    --------
-    >> data, info = rdsamp('samples/format212/100', 0, 10)
+          keys :
+          'signal_names' - Names of each signal
+          'samp_freq' - Sampling freq (samples / second)
+          'samp_count' - Total samples in record
+          'firstvalues' - First value of each signal
+          'gains' - Gain for each signal
+          'zerovalues' - Zero value for each signal
     
     """
     # read the header file - output is a dict
@@ -61,17 +114,35 @@ def rdsamp(record, start=0, end=-1, interval=-1):
     data = _read_data(record, start, end, info) 
     return data, info
 
-def rdann(record, annotator, start=0, end=-1):
-    """Read the annotation for given record by the annotator.
-    record is path to record, no extension.
-    annotator is the name of annotator, eg. 'atr'.
-    Optional start, end and interval are in seconds
-    and specify interval when annot should be read.
-    If both end and interval are given, the earlier
-    of the two limits is chosen.
-    Array that is returned has time in samples in first column,
-    time in ms in second column
-    and annotations code in third column
+def rdann(record, annotator, start=0, end=-1, types=[]):
+    """
+    Reads annotations for given record by specified annotator.
+
+    Parameters
+    ----------
+    record : str
+            Full path to record. Record name has no extension.
+    annotator : str
+            Name of annotator, eg. 'atr'.
+            This is the extension for the annotation file.
+    start  : int, optional
+            time to begin in seconds, default 0
+    end    : int, optional
+            time to end in seconds, defaults to end of record
+    types   : list, optional
+            list of annotation types that will be returned.
+            Types are input as annotation code (integer from 0 to 49)
+            Annotation types not in list will be ignored.
+            Default is empty list, which results in all types being read.
+            
+    Returns
+    -------
+    data : (N, 3) ndarray
+          numpy array with 3 columns
+          col 1 - Elapsed time in samples for each annotation.
+          col 2 - Elapsed time in seconds for each annotation.
+          col 3 - The annotation code.
+
     """
     # get header data
     info = _read_header(record)
@@ -109,6 +180,10 @@ def rdann(record, annotator, start=0, end=-1):
     # filter by annot_time in interval
     ann =  ann[start <= ann[:, 0]]
     ann = ann[ann[:, 0] <= end]
+    # filter by type
+    if types != []:
+        ann = ann[numpy.array([ann[x, 2] in types for x in range(len(ann))])]
+
     return ann
     
 def plot_data(data, info, ann=None):
@@ -154,7 +229,8 @@ def plot_data(data, info, ann=None):
     pylab.show()
 
 def _read_header(record):
-    """Read the headerfile for the record"""
+    """Reads the headerfile for the record.
+    Returns the information as a dictionary"""
     headerfile = record + '.hea'
     info = {}
     info['gains'] = []; info['zerovalues'] = []
@@ -262,12 +338,31 @@ def _arr_to_data(arr):
     data[:, 3] = (bytes2 << 8) + arr[:, 2] - sign2
     return data
 
+def get_annotation_code(code=None):
+    """Returns the symbolic definition for the wfdb annotation code.
+
+    See http://www.physionet.org/physiotools/wpg/wpg_31.htm for details.
+    Based on ecgcodes.h from wfdb.
+    
+    Parameters
+    ----------
+    code : int
+           Integer from 0 to 49 (ACMAX).
+
+    Returns
+    -------
+    Definition : str
+                 The definition for the code.
+
+    """
+    return CODEDICT[code]
+
 def test():
     """Run some tests"""
     numpy.set_printoptions(precision=3, suppress=True)
     record  = '/data/Dropbox/programming/ECGtk/samples/format212/100'
     data, info = rdsamp(record, 0, 10)
-    ann = rdann(record, 'atr', 0, 10)
+    ann = rdann(record, 'atr', 0, 10, types=[1])
     print data
     print ann
     print info
