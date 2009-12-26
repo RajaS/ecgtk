@@ -19,17 +19,40 @@ import pylab
 
 def rdsamp(record, start=0, end=-1, interval=-1):
     """
-    Read signals from the specified wfdb record.
-    **Only supports format 212 records with 2 signals**
-    record - name of record without extension
-    start - time to begin in seconds, default 0
-    end - time to end in seconds, defaults to end of record
-    interval - interval to read.
-    If both interval and end are given, earlier limit is used.
-    Elapsed time in samples is in first column of output.
-    Elapsed time in milliseconds is second column.
+    Read signals from a format 212 record from Physionet database.
+
+    Only 2 channel records in format 212 are supported.
+    This is the most common record in the
+    Physionet database(http://www.physionet.org/physiobank/).
+    
+    Parameters
+    ----------
+    record : str
+            name of record without extension
+    start  : int, optional
+            time to begin in seconds, default 0
+    end    : int, optional
+            time to end in seconds, defaults to end of record
+    interval : int, optional
+            interval of data to be read.
+            If both interval and end are given, earlier limit is used.
+
+    Returns
+    -------
+    data : (N, 3) ndarray
+          numpy array with 4 columns
+          col 1 - Elapsed time in samples
+          col 2 - Elapsed time in milliseconds
+          col 3,4 - The two signals
+          Signal amplitude is in physical units (mV)          
+    info : dict
+          Dictionary containing header information
+
+    Example
+    -------
+    >> data, info = rdsamp('samples/format212/100', 0, 10)
+    
     """
-    #TODO: check if output in mV is accurate
     # read the header file - output is a dict
     info = _read_header(record)
     # establish start and end in samples
