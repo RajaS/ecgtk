@@ -109,7 +109,8 @@ def rdsamp(record, start=0, end=-1, interval=-1):
     # read the header file - output is a dict
     info = rdhdr(record)
     # establish start and end in samples
-    start, end = _get_read_limits(start, end, interval, info) 
+    start, end = _get_read_limits(start, end, interval, info)
+    print 'rdsamp start and end', start, end
     # read the data
     data = _read_data(record, start, end, info) 
     return data, info
@@ -222,7 +223,9 @@ def plot_data(data, info, ann=None):
     pylab.xlabel('Time (seconds)')
 
     if ann != None:
-        ann_x = ann[:, 0].astype('int') # ann time in samples
+        # annotation time in samples from start
+        ann_x = (ann[:, 0] - data[0,0]).astype('int')
+        print 'ann_x', ann_x
         pylab.plot(ann[:, 1], data[ann_x, 3], 'xr')
         pylab.subplot(211)
         pylab.plot(ann[:, 1], data[ann_x, 2], 'xr')
@@ -343,7 +346,7 @@ def _read_data(record, start, end, info):
     data[:, 3] = (data[:, 3] - info['zerovalues'][1]) / info['gains'][1]
 
     # time columns
-    data[:, 0] = numpy.arange(start, end) + start # elapsed time in samples
+    data[:, 0] = numpy.arange(start, end)  # elapsed time in samples
     data[:, 1] = (numpy.arange(samp_to_read) + start) / info['samp_freq'] # in sec
     return data
 
@@ -380,19 +383,18 @@ def get_annotation_code(code=None):
     """
     return CODEDICT[code]
 
-def test():
-    """Run some tests"""
+def main():
+    """"""
     numpy.set_printoptions(precision=3, suppress=True)
     record  = '/data/Dropbox/programming/ECGtk/samples/format212/100'
-    data, info = rdsamp(record, 0, 10)
-    ann = rdann(record, 'atr', 0, 10) #, types=[1])
+    data, info = rdsamp(record, 10, 20)
+    ann = rdann(record, 'atr', 10, 20) #, types=[1])
     print data
     print ann
     print info
 
     plot_data(data, info, ann)
     
-    
 if __name__ == '__main__':
-    test()
+    main()
         
