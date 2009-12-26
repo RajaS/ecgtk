@@ -102,7 +102,7 @@ def rdann(record, annotator, start=0, end=-1):
         i += 1
     # annot_time should be total elapsed samples
     annot_time = numpy.cumsum(annot_time)
-    annot_time_ms = annot_time * 1000 // info['samp_freq']
+    annot_time_ms = annot_time / info['samp_freq'] # in seconds
     # limit to requested interval
     start, end = _get_read_limits(start, end, -1, info)
     ann = numpy.array([annot_time, annot_time_ms, annot]).transpose()
@@ -117,10 +117,10 @@ def plot_data(data, info, ann=None):
     time = data[:, 1] # use data[:, 2] to use sample no.
     pylab.subplot(211)
     pylab.plot(time, data[:, 2], 'k')
-    pylab.plot(ann[:, 1], data[ann[:, 2], 2], 'xr')
+    pylab.plot(ann[:, 1], data[ann[:, 0].astype('int'), 2], 'xr')
     pylab.subplot(212)
     pylab.plot(time, data[:, 3], 'k')
-    pylab.plot(ann[:, 1], data[ann[:, 2], 3], 'xr')
+    pylab.plot(ann[:, 1], data[ann[:, 0].astype('int'), 3], 'xr')
     pylab.show()
 
 def _read_header(record):
@@ -197,7 +197,7 @@ def _read_data(record, start, end, info):
                         dtype=numpy.uint8).reshape(1,3))
     fid.close()
 
-    if [data[0, 2], data[0, 3]] != info['firstvalues']:
+    if [data[0, 0], data[0, 1]] != info['firstvalues']:
         warnings.warn(
             'First value from dat file does not match value in header')
     
@@ -212,9 +212,10 @@ def _read_data(record, start, end, info):
     # adjust zerovalue and gain
     data[:, 2] = (data[:, 2] - info['zerovalues'][0]) / info['gains'][0]
     data[:, 3] = (data[:, 3] - info['zerovalues'][1]) / info['gains'][1]
-    time = numpy.arange(samp_to_read) *1000 // info['samp_freq'] # in ms
-    data[:, 0] = numpy.arange(start, end) + start
-    data[:, 1] = time + (start * 1000 // info['samp_freq'])
+
+    # time columns
+    data[:, 0] = numpy.arange(start, end) + start # elapsed time in samples
+    data[:, 1] = (numpy.arange(samp_to_read) + start) / info['samp_freq'] # in sec
     return data
 
 def _arr_to_data(arr):
@@ -233,6 +234,7 @@ def _arr_to_data(arr):
 
 def test():
     """Run some tests"""
+    numpy.set_printoptions(precision=3, suppress=True)
     record  = '/data/Dropbox/programming/ECGtk/samples/format212/100'
     data, info = rdsamp(record, 0, 10)
     ann = rdann(record, 'atr', 0, 10)
