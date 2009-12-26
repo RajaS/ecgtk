@@ -39,7 +39,7 @@ def rdsamp(record, start=0, end=-1, interval=-1):
 
     Returns
     -------
-    data : (N, 3) ndarray
+    data : (N, 4) ndarray
           numpy array with 4 columns
           col 1 - Elapsed time in samples
           col 2 - Elapsed time in milliseconds
@@ -48,8 +48,8 @@ def rdsamp(record, start=0, end=-1, interval=-1):
     info : dict
           Dictionary containing header information
 
-    Example
-    -------
+    Examples
+    --------
     >> data, info = rdsamp('samples/format212/100', 0, 10)
     
     """
@@ -112,15 +112,45 @@ def rdann(record, annotator, start=0, end=-1):
     return ann
     
 def plot_data(data, info, ann=None):
-    """Plot the signals"""
-    # TODO: check if ann has been given
-    time = data[:, 1] # use data[:, 2] to use sample no.
+    """
+    Plot the signal with annotations if available.
+
+    Parameters
+    ----------
+    data : (N, 4) ndarray
+         Output array from rdsamp.
+    info : dict
+         Header information as a dictionary.
+         Output from rdsamp
+    ann : (N, 2) ndarray, optional
+         Output from rdann
+
+    Returns
+    -------
+    None
+    Matplotlib figure is plotted with the signals and annotations.
+    
+    """
+    time = data[:, 1] #in seconds. use data[:, 0] to use sample no.
+    sig1 = data[:, 2]
+    sig2 = data[:, 3]
+    
     pylab.subplot(211)
-    pylab.plot(time, data[:, 2], 'k')
-    pylab.plot(ann[:, 1], data[ann[:, 0].astype('int'), 2], 'xr')
+    pylab.plot(time, sig1, 'k')
+    pylab.xticks([])
+    pylab.ylabel('%s (mV)' %(info['signal_names'][0]))
+    
     pylab.subplot(212)
     pylab.plot(time, data[:, 3], 'k')
-    pylab.plot(ann[:, 1], data[ann[:, 0].astype('int'), 3], 'xr')
+    pylab.ylabel('%s (mV)' %(info['signal_names'][1])) 
+    pylab.xlabel('Time (seconds)')
+
+    if ann != None:
+        ann_x = ann[:, 0].astype('int') # ann time in samples
+        pylab.plot(ann[:, 1], data[ann_x, 3], 'xr')
+        pylab.subplot(211)
+        pylab.plot(ann[:, 1], data[ann_x, 2], 'xr')
+
     pylab.show()
 
 def _read_header(record):
