@@ -182,7 +182,8 @@ def rdann(record, annotator, start=0, end=-1, types=[]):
     ann = ann[ann[:, 0] <= end]
     # filter by type
     if types != []:
-        ann = ann[numpy.array([ann[x, 2] in types for x in range(len(ann))])]
+        ann = ann[numpy.logical_or.reduce([ann[:,2] == x for x in types])]
+        #ann = ann[numpy.array([ann[x, 2] in types for x in range(len(ann))])]
 
     return ann
     
@@ -362,7 +363,7 @@ def test():
     numpy.set_printoptions(precision=3, suppress=True)
     record  = '/data/Dropbox/programming/ECGtk/samples/format212/100'
     data, info = rdsamp(record, 0, 10)
-    ann = rdann(record, 'atr', 0, 10, types=[1])
+    ann = rdann(record, 'atr', 0, 10) #, types=[1])
     print data
     print ann
     print info
