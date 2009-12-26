@@ -107,7 +107,7 @@ def rdsamp(record, start=0, end=-1, interval=-1):
     
     """
     # read the header file - output is a dict
-    info = _read_header(record)
+    info = rdhdr(record)
     # establish start and end in samples
     start, end = _get_read_limits(start, end, interval, info) 
     # read the data
@@ -145,7 +145,7 @@ def rdann(record, annotator, start=0, end=-1, types=[]):
 
     """
     # get header data
-    info = _read_header(record)
+    info = rdhdr(record)
     
     annfile = record + '.' + annotator
     fid = open(annfile, 'rb')
@@ -229,9 +229,31 @@ def plot_data(data, info, ann=None):
 
     pylab.show()
 
-def _read_header(record):
-    """Reads the headerfile for the record.
-    Returns the information as a dictionary"""
+def rdhdr(record):
+    """
+    Returns the information read from the header file
+
+    Header file for each record has suffix '.hea' and
+    contains information about the record and each signal.
+
+    Parameters
+    ----------
+    record : str
+            Full path to record. Record name has no extension.
+
+    Returns
+    -------
+    info : dict
+          Information read from the header as a dictionary.
+          keys :
+          'signal_names' - Names of each signal
+          'samp_freq' - Sampling freq (samples / second)
+          'samp_count' - Total samples in record
+          'firstvalues' - First value of each signal
+          'gains' - Gain for each signal
+          'zerovalues' - Zero value for each signal
+    
+    """
     headerfile = record + '.hea'
     info = {}
     info['gains'] = []; info['zerovalues'] = []
@@ -304,7 +326,7 @@ def _read_data(record, start, end, info):
                         dtype=numpy.uint8).reshape(1,3))
     fid.close()
 
-    if [data[0, 0], data[0, 1]] != info['firstvalues']:
+    if [data[0, 2], data[0, 3]] != info['firstvalues']:
         warnings.warn(
             'First value from dat file does not match value in header')
     
