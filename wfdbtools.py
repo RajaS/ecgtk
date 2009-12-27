@@ -64,9 +64,6 @@ CODEDICT = {
     }
 
 
-
-
-
 def rdsamp(record, start=0, end=-1, interval=-1):
     """
     Read signals from a format 212 record from Physionet database.
@@ -110,7 +107,6 @@ def rdsamp(record, start=0, end=-1, interval=-1):
     info = rdhdr(record)
     # establish start and end in samples
     start, end = _get_read_limits(start, end, interval, info)
-    print 'rdsamp start and end', start, end
     # read the data
     data = _read_data(record, start, end, info) 
     return data, info
@@ -145,6 +141,9 @@ def rdann(record, annotator, start=0, end=-1, types=[]):
           col 3 - The annotation code.
 
     """
+    # TODO: annotation time is off in the end for 100.atr
+    # Error happens after code=61 at annot 1911.
+    # last correct annot_time = 546792
     # get header data
     info = rdhdr(record)
     
@@ -157,6 +156,9 @@ def rdann(record, annotator, start=0, end=-1, types=[]):
     annot = []
     annot_time = []
     i = 0
+
+    print rows
+    
     while i < rows:
         anntype = arr[i, 1] >> 2
         if anntype == 59:
@@ -165,6 +167,8 @@ def rdann(record, annotator, start=0, end=-1, types=[]):
                               (arr[i+1, 0] << 16) + arr[i+1, 1] << 24)
             i += 3
         elif anntype in [60, 61, 62, 63]:
+            print anntype, i
+            print numpy.sum(annot_time)
             hilfe = arr[i, 0] + ((arr[i, 1] & 3) << 8)
             hilfe += hilfe % 2
             i += hilfe / 2
@@ -225,7 +229,6 @@ def plot_data(data, info, ann=None):
     if ann != None:
         # annotation time in samples from start
         ann_x = (ann[:, 0] - data[0,0]).astype('int')
-        print 'ann_x', ann_x
         pylab.plot(ann[:, 1], data[ann_x, 3], 'xr')
         pylab.subplot(211)
         pylab.plot(ann[:, 1], data[ann_x, 2], 'xr')
@@ -297,11 +300,23 @@ def rdhdr(record):
 def _get_read_limits(start, end, interval, info):
     """
     Given start time, end time and interval
-    for reading data, determine limits to use.
-    samp_count is number of samples in record.
+    for reading data, determines limits to use.
+    info is the dict returned by rdhdr
     end of -1 means end of record.
     If both end and interval are given, choose
     earlier limit of two.
+    start and end are returned as samples.
+    Example:
+    >>> _get_read_limits(0, 2, -1, {'samp_count':100, 'samp_freq':10})
+    (0, 20)
+    >>> _get_read_limits(0, 2, 3, {'samp_count':100, 'samp_freq':10})
+    (0, 20)
+    >>> _get_read_limits(0, 4, 2, {'samp_count':100, 'samp_freq':10})
+    (0, 20)
+    >>> _get_read_limits(0, 105, -1, {'samp_count':100, 'samp_freq':10})
+    (0, 100)
+    >>> _get_read_limits(-1, -1, -1, {'samp_count':100, 'samp_freq':10})
+    (0, 100)
     """
     start *= info['samp_freq']
     end *= info['samp_freq']
@@ -387,13 +402,15 @@ def main():
     """"""
     numpy.set_printoptions(precision=3, suppress=True)
     record  = '/data/Dropbox/programming/ECGtk/samples/format212/100'
-    data, info = rdsamp(record, 10, 20)
-    ann = rdann(record, 'atr', 10, 20) #, types=[1])
-    print data
-    print ann
-    print info
+    #data, info = rdsamp(record, 10, 20)
+    ann = rdann(record, 'atr') #, types=[1])
+    #print data
+    #print len(data)
+    print 'len(ann)', len(ann)
+    print ann[1900:1920, :]
+    #print info
 
-    plot_data(data, info, ann)
+    #plot_data(data, info, ann)
     
 if __name__ == '__main__':
     main()
