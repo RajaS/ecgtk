@@ -141,9 +141,6 @@ def rdann(record, annotator, start=0, end=-1, types=[]):
           col 3 - The annotation code.
 
     """
-    # TODO: annotation time is off in the end for 100.atr
-    # Error happens after code=61 at annot 1911.
-    # last correct annot_time = 546792
     # get header data
     info = rdhdr(record)
     
@@ -157,8 +154,6 @@ def rdann(record, annotator, start=0, end=-1, types=[]):
     annot_time = []
     i = 0
 
-    print rows
-    
     while i < rows:
         anntype = arr[i, 1] >> 2
         if anntype == 59:
@@ -166,9 +161,9 @@ def rdann(record, annotator, start=0, end=-1, types=[]):
             annot_time.append(arr[i+2, 0] + (arr[i+2, 1] << 8) +
                               (arr[i+1, 0] << 16) + arr[i+1, 1] << 24)
             i += 3
-        elif anntype in [60, 61, 62, 63]:
-            print anntype, i
-            print numpy.sum(annot_time)
+        elif anntype in [60, 61, 62]:
+            pass
+        elif anntype == 63:
             hilfe = arr[i, 0] + ((arr[i, 1] & 3) << 8)
             hilfe += hilfe % 2
             i += hilfe / 2
@@ -176,6 +171,10 @@ def rdann(record, annotator, start=0, end=-1, types=[]):
             annot_time.append(arr[i, 0] + ((arr[i, 1] & 3) << 8))
             annot.append(arr[i, 1] >> 2)
         i += 1
+
+    # last values are EOF indicator
+    annot_time = annot_time[:-1]
+    annot = annot[:-1]
     # annot_time should be total elapsed samples
     annot_time = numpy.cumsum(annot_time)
     annot_time_ms = annot_time / info['samp_freq'] # in seconds
@@ -402,13 +401,15 @@ def main():
     """"""
     numpy.set_printoptions(precision=3, suppress=True)
     record  = '/data/Dropbox/programming/ECGtk/samples/format212/100'
-    #data, info = rdsamp(record, 10, 20)
+    data, info = rdsamp(record)
     ann = rdann(record, 'atr') #, types=[1])
-    #print data
+    print data
+    print data[-1, 1:].tolist()
     #print len(data)
-    print 'len(ann)', len(ann)
-    print ann[1900:1920, :]
-    #print info
+    #print 'len(ann)', len(ann)
+    print ann
+    print len(ann)
+    print info
 
     #plot_data(data, info, ann)
     
