@@ -1,80 +1,308 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-	"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
-<head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-
-	<title>RajaS/ecgtk @ GitHub</title>
-	
-	<style type="text/css">
-		body {
-  		margin-top: 1.0em;
-  		background-color: #afc4c6;
-		  font-family: "Helvetica,Arial,FreeSans"; 
-  		color: #000000;
-    }
-    #container {
-      margin: 0 auto;
-      width: 700px;
-    }
-		h1 { font-size: 3.8em; color: #503b39; margin-bottom: 3px; }
-		h1 .small { font-size: 0.4em; }
-		h1 a { text-decoration: none }
-		h2 { font-size: 1.5em; color: #503b39; }
-    h3 { text-align: center; color: #503b39; }
-    a { color: #503b39; }
-    .description { font-size: 1.2em; margin-bottom: 30px; margin-top: 30px; font-style: italic;}
-    .download { float: right; }
-		pre { background: #000; color: #fff; padding: 15px;}
-    hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
-    .footer { text-align:center; padding-top:30px; font-style: italic; }
-	</style>
-	
-</head>
-
-<body>
-  <a href="http://github.com/RajaS/ecgtk"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub" /></a>
-  
-  <div id="container">
-
-    <div class="download">
-      <a href="http://github.com/RajaS/ecgtk/zipball/master">
-        <img border="0" width="90" src="http://github.com/images/modules/download/zip.png"></a>
-      <a href="http://github.com/RajaS/ecgtk/tarball/master">
-        <img border="0" width="90" src="http://github.com/images/modules/download/tar.png"></a>
-    </div>
-      
-    <h1><a href="http://github.com/RajaS/ecgtk">wfdbtools</a> 
-      <span class="small">by <a href="http://github.com/RajaS">RajaS</a></span></h1>
-
-    <div class="description">
-      Some of the WFDB tools in pure python.
-    </div>
-
-    <h2>Authors</h2>
-<p>Raja S (rajajs@gmail.com)<br/><br/>      </p>
-<h2>Contact</h2>
-<p>Raja Selvaraj (rajajs@gmail.com)<br/>      </p>
-
-
-    <h2>Download</h2>
-    <p>
-      You can download this project in either
-      <a href="http://github.com/RajaS/ecgtk/zipball/master">zip</a> or
-      <a href="http://github.com/RajaS/ecgtk/tarball/master">tar</a> formats.
-    </p>
-    <p>You can also clone the project with <a href="http://git-scm.com">Git</a>
-      by running:
-      <pre>$ git clone git://github.com/RajaS/ecgtk</pre>
-    </p>
-      
-    <div class="footer">
-      get the source code on GitHub : <a href="http://github.com/RajaS/ecgtk">RajaS/ecgtk</a>
-    </div>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-  </div>
+    <title>Welcome to wfdbtools’s documentation! &mdash; wfdbtools v0.1 documentation</title>
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.1',
+        COLLAPSE_MODINDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="wfdbtools v0.1 documentation" href="" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="modindex.html" title="Global Module Index"
+             accesskey="M">modules</a> |</li>
+        <li><a href="">wfdbtools v0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
 
-  
-</body>
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-wfdbtools">
+<h1>Welcome to wfdbtools&#8217;s documentation!<a class="headerlink" href="#module-wfdbtools" title="Permalink to this headline">¶</a></h1>
+<p>Contents:</p>
+<ul class="simple">
+</ul>
+<p>The WFDB (Waveform Database) software package is a set of tools
+for accessing and using the waveform data in Physiobank. 
+This module intends to provide some of the wfdb tools in pure python.
+A deliberate attempt is made to try to keep names and usage similar to the
+original wfdb applications for simplicity of use.</p>
+<dl class="function">
+<dt id="wfdbtools.rdsamp">
+<tt class="descclassname">wfdbtools.</tt><tt class="descname">rdsamp</tt><big>(</big><em>record</em>, <em>start=0</em>, <em>end=-1</em>, <em>interval=-1</em><big>)</big><a class="headerlink" href="#wfdbtools.rdsamp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read signals from a format 212 record from Physionet database.</p>
+<p>Only 2 channel records in format 212 are supported.
+This is the most common record in the
+Physionet database(<a class="reference external" href="http://www.physionet.org/physiobank/">http://www.physionet.org/physiobank/</a>).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>record</strong> : str</p>
+<blockquote>
+<p>Full path to record. No extension to be used for record name.</p>
+</blockquote>
+<p><strong>start</strong> : int, optional</p>
+<blockquote>
+<p>time to begin in seconds, default 0</p>
+</blockquote>
+<p><strong>end</strong> : int, optional</p>
+<blockquote>
+<p>time to end in seconds, defaults to end of record</p>
+</blockquote>
+<p><strong>interval</strong> : int, optional</p>
+<blockquote>
+<p>interval of data to be read.
+If both interval and end are given, earlier limit is used.</p>
+</blockquote>
+</td>
+</tr>
+<tr class="field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>data</strong> : (N, 4) ndarray</p>
+<blockquote>
+<p>numpy array with 4 columns
+col 1 - Elapsed time in samples
+col 2 - Elapsed time in milliseconds
+col 3,4 - The two signals
+Signal amplitude is in physical units (mV)</p>
+</blockquote>
+<p><strong>info</strong> : dict</p>
+<blockquote class="last">
+<p>Dictionary containing header information
+keys :
+&#8216;signal_names&#8217; - Names of each signal
+&#8216;samp_freq&#8217; - Sampling freq (samples / second)
+&#8216;samp_count&#8217; - Total samples in record
+&#8216;firstvalues&#8217; - First value of each signal
+&#8216;gains&#8217; - Gain for each signal
+&#8216;zerovalues&#8217; - Zero value for each signal</p>
+</blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="wfdbtools.rdann">
+<tt class="descclassname">wfdbtools.</tt><tt class="descname">rdann</tt><big>(</big><em>record</em>, <em>annotator</em>, <em>start=0</em>, <em>end=-1</em>, <em>types=</em><span class="optional">[</span><span class="optional">]</span><big>)</big><a class="headerlink" href="#wfdbtools.rdann" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads annotations for given record by specified annotator.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>record</strong> : str</p>
+<blockquote>
+<p>Full path to record. Record name has no extension.</p>
+</blockquote>
+<p><strong>annotator</strong> : str</p>
+<blockquote>
+<p>Name of annotator, eg. &#8216;atr&#8217;.
+This is the extension for the annotation file.</p>
+</blockquote>
+<p><strong>start</strong> : int, optional</p>
+<blockquote>
+<p>time to begin in seconds, default 0</p>
+</blockquote>
+<p><strong>end</strong> : int, optional</p>
+<blockquote>
+<p>time to end in seconds, defaults to end of record</p>
+</blockquote>
+<p><strong>types</strong> : list, optional</p>
+<blockquote>
+<p>list of annotation types that will be returned.
+Types are input as annotation code (integer from 0 to 49)
+Annotation types not in list will be ignored.
+Default is empty list, which results in all types being read.</p>
+</blockquote>
+</td>
+</tr>
+<tr class="field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>data</strong> : (N, 3) ndarray</p>
+<blockquote class="last">
+<p>numpy array with 3 columns
+col 1 - Elapsed time in samples for each annotation.
+col 2 - Elapsed time in seconds for each annotation.
+col 3 - The annotation code.</p>
+</blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="wfdbtools.rdhdr">
+<tt class="descclassname">wfdbtools.</tt><tt class="descname">rdhdr</tt><big>(</big><em>record</em><big>)</big><a class="headerlink" href="#wfdbtools.rdhdr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the information read from the header file</p>
+<p>Header file for each record has suffix &#8216;.hea&#8217; and
+contains information about the record and each signal.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>record</strong> : str</p>
+<blockquote>
+<p>Full path to record. Record name has no extension.</p>
+</blockquote>
+</td>
+</tr>
+<tr class="field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>info</strong> : dict</p>
+<blockquote class="last">
+<p>Information read from the header as a dictionary.
+keys :
+&#8216;signal_names&#8217; - Names of each signal
+&#8216;samp_freq&#8217; - Sampling freq (samples / second)
+&#8216;samp_count&#8217; - Total samples in record
+&#8216;firstvalues&#8217; - First value of each signal
+&#8216;gains&#8217; - Gain for each signal
+&#8216;zerovalues&#8217; - Zero value for each signal</p>
+</blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="wfdbtools.get_annotation_code">
+<tt class="descclassname">wfdbtools.</tt><tt class="descname">get_annotation_code</tt><big>(</big><em>code=None</em><big>)</big><a class="headerlink" href="#wfdbtools.get_annotation_code" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the symbolic definition for the wfdb annotation code.</p>
+<p>See <a class="reference external" href="http://www.physionet.org/physiotools/wpg/wpg_31.htm">http://www.physionet.org/physiotools/wpg/wpg_31.htm</a> for details.
+Based on ecgcodes.h from wfdb.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>code</strong> : int</p>
+<blockquote>
+<p>Integer from 0 to 49 (ACMAX).</p>
+</blockquote>
+</td>
+</tr>
+<tr class="field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>Definition</strong> : str</p>
+<blockquote class="last">
+<p>The definition for the code.</p>
+</blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="wfdbtools.plot_data">
+<tt class="descclassname">wfdbtools.</tt><tt class="descname">plot_data</tt><big>(</big><em>data</em>, <em>info</em>, <em>ann=None</em><big>)</big><a class="headerlink" href="#wfdbtools.plot_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the signal with annotations if available.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>data</strong> : (N, 4) ndarray</p>
+<blockquote>
+<p>Output array from rdsamp.</p>
+</blockquote>
+<p><strong>info</strong> : dict</p>
+<blockquote>
+<p>Header information as a dictionary.
+Output from rdsamp</p>
+</blockquote>
+<p><strong>ann</strong> : (N, 2) ndarray, optional</p>
+<blockquote>
+<p>Output from rdann</p>
+</blockquote>
+</td>
+</tr>
+<tr class="field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>None</strong> :</p>
+<p class="last"><strong>Matplotlib figure is plotted with the signals and annotations.</strong> :</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference external" href="genindex.html"><em>Index</em></a></li>
+<li><a class="reference external" href="modindex.html"><em>Module Index</em></a></li>
+<li><a class="reference external" href="search.html"><em>Search Page</em></a></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <h3><a href="">Table Of Contents</a></h3>
+            <ul>
+<li><a class="reference external" href="">Welcome to wfdbtools&#8217;s documentation!</a><ul>
+</ul>
+</li>
+<li><a class="reference external" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+
+            <h3>This Page</h3>
+            <ul class="this-page-menu">
+              <li><a href="_sources/index.txt"
+                     rel="nofollow">Show Source</a></li>
+            </ul>
+          <div id="searchbox" style="display: none">
+            <h3>Quick search</h3>
+              <form class="search" action="search.html" method="get">
+                <input type="text" name="q" size="18" />
+                <input type="submit" value="Go" />
+                <input type="hidden" name="check_keywords" value="yes" />
+                <input type="hidden" name="area" value="default" />
+              </form>
+              <p class="searchtip" style="font-size: 90%">
+              Enter search terms or a module, class or function name.
+              </p>
+          </div>
+          <script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="modindex.html" title="Global Module Index"
+             >modules</a> |</li>
+        <li><a href="">wfdbtools v0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+      &copy; Copyright 2009, Raja Selvaraj.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 0.6.2.
+    </div>
+  </body>
 </html>
