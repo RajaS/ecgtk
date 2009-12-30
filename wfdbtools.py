@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
 """
-Provide some of the wfdb IO tools in pure python.
-I will try to keep names and usage similar to the
-original wfdb applications for simplicity.
+The WFDB (Waveform Database) software package is a set of tools
+for accessing and using the waveform data in Physiobank. 
+This module intends to provide some of the wfdb tools in pure python.
+A deliberate attempt is made to try to keep names and usage similar to the
+original wfdb applications for simplicity of use.
 """
 # Author: Raja Selvaraj <rajajs@gmail.com>
 # Written in December 2009
