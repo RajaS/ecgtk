@@ -6,6 +6,34 @@ for accessing and using the waveform data in Physiobank.
 This module intends to provide some of the wfdb tools in pure python.
 A deliberate attempt is made to try to keep names and usage similar to the
 original wfdb applications for simplicity of use.
+
+Example Usage::
+
+    >> from wfdbtools import rdsamp, rdann, plot_data
+    >> from pprint import pprint
+    
+    # Record is a format 212 record from physiobank.
+    # Note that name of record does not include extension.
+    >> record  = 'samples/format212/100'
+
+    # Read in the data from 0 to 10 seconds
+    >> data, info = rdsamp(record, 0, 10)
+    >> print data.shape
+    (3600, 4)
+    >> pprint info
+    {'firstvalues': [995, 1011],
+    'gains': [200, 200],
+    'samp_count': 650000,
+    'samp_freq': 360,
+    'signal_names': ['MLII', 'V5'],
+    'zerovalues': [1024, 1024]}
+    
+    # And now read the annotation
+    >> ann = rdann(record, 'atr', 0, 10)
+
+    # Plot the data and the mark the annotations
+    >> plot_data(data, info, ann)
+
 """
 # Author: Raja Selvaraj <rajajs@gmail.com>
 # Written in December 2009
