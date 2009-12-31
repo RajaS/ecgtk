@@ -18,6 +18,7 @@ Example Usage::
 
     # Read in the data from 0 to 10 seconds
     >> data, info = rdsamp(record, 0, 10)
+    # data columns are time(samples), time(seconds), signal1, signal2
     >> print data.shape
     (3600, 4)
     >> pprint info
