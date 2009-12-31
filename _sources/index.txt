@@ -13,6 +13,8 @@ Contents:
 
 .. automodule:: wfdbtools
 
+.. image:: plot.png
+
 rdsamp
 ------
 .. autofunction:: rdsamp
