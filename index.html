@@ -5,7 +5,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Welcome to wfdbtools’s documentation! &mdash; wfdbtools v0.1 documentation</title>
+    <title>The wfdbtools module &mdash; wfdbtools v0.1 documentation</title>
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
@@ -41,7 +41,7 @@
           <div class="body">
             
   <div class="section" id="module-wfdbtools">
-<h1>Welcome to wfdbtools&#8217;s documentation!<a class="headerlink" href="#module-wfdbtools" title="Permalink to this headline">¶</a></h1>
+<h1>The wfdbtools module<a class="headerlink" href="#module-wfdbtools" title="Permalink to this headline">¶</a></h1>
 <p>Contents:</p>
 <ul class="simple">
 </ul>
@@ -50,6 +50,34 @@ for accessing and using the waveform data in Physiobank.
 This module intends to provide some of the wfdb tools in pure python.
 A deliberate attempt is made to try to keep names and usage similar to the
 original wfdb applications for simplicity of use.</p>
+<p>Example Usage:</p>
+<div class="highlight-python"><pre>&gt;&gt; from wfdbtools import rdsamp, rdann, plot_data
+&gt;&gt; from pprint import pprint
+
+# Record is a format 212 record from physiobank.
+# Note that name of record does not include extension.
+&gt;&gt; record  = 'samples/format212/100'
+
+# Read in the data from 0 to 10 seconds
+&gt;&gt; data, info = rdsamp(record, 0, 10)
+&gt;&gt; print data.shape
+(3600, 4)
+&gt;&gt; pprint info
+{'firstvalues': [995, 1011],
+'gains': [200, 200],
+'samp_count': 650000,
+'samp_freq': 360,
+'signal_names': ['MLII', 'V5'],
+'zerovalues': [1024, 1024]}
+
+# And now read the annotation
+&gt;&gt; ann = rdann(record, 'atr', 0, 10)
+
+# Plot the data and the mark the annotations
+&gt;&gt; plot_data(data, info, ann)</pre>
+</div>
+<div class="section" id="rdsamp">
+<h2>rdsamp<a class="headerlink" href="#rdsamp" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
 <dt id="wfdbtools.rdsamp">
 <tt class="descclassname">wfdbtools.</tt><tt class="descname">rdsamp</tt><big>(</big><em>record</em>, <em>start=0</em>, <em>end=-1</em>, <em>interval=-1</em><big>)</big><a class="headerlink" href="#wfdbtools.rdsamp" title="Permalink to this definition">¶</a></dt>
@@ -105,6 +133,9 @@ keys :
 </table>
 </dd></dl>
 
+</div>
+<div class="section" id="rdann">
+<h2>rdann<a class="headerlink" href="#rdann" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
 <dt id="wfdbtools.rdann">
 <tt class="descclassname">wfdbtools.</tt><tt class="descname">rdann</tt><big>(</big><em>record</em>, <em>annotator</em>, <em>start=0</em>, <em>end=-1</em>, <em>types=</em><span class="optional">[</span><span class="optional">]</span><big>)</big><a class="headerlink" href="#wfdbtools.rdann" title="Permalink to this definition">¶</a></dt>
@@ -152,6 +183,9 @@ col 3 - The annotation code.</p>
 </table>
 </dd></dl>
 
+</div>
+<div class="section" id="rdhdr">
+<h2>rdhdr<a class="headerlink" href="#rdhdr" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
 <dt id="wfdbtools.rdhdr">
 <tt class="descclassname">wfdbtools.</tt><tt class="descname">rdhdr</tt><big>(</big><em>record</em><big>)</big><a class="headerlink" href="#wfdbtools.rdhdr" title="Permalink to this definition">¶</a></dt>
@@ -185,6 +219,9 @@ keys :
 </table>
 </dd></dl>
 
+</div>
+<div class="section" id="utilities">
+<h2>utilities<a class="headerlink" href="#utilities" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
 <dt id="wfdbtools.get_annotation_code">
 <tt class="descclassname">wfdbtools.</tt><tt class="descname">get_annotation_code</tt><big>(</big><em>code=None</em><big>)</big><a class="headerlink" href="#wfdbtools.get_annotation_code" title="Permalink to this definition">¶</a></dt>
@@ -243,6 +280,7 @@ Output from rdsamp</p>
 </dd></dl>
 
 </div>
+</div>
 <div class="section" id="indices-and-tables">
 <h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
@@ -260,7 +298,11 @@ Output from rdsamp</p>
         <div class="sphinxsidebarwrapper">
             <h3><a href="">Table Of Contents</a></h3>
             <ul>
-<li><a class="reference external" href="">Welcome to wfdbtools&#8217;s documentation!</a><ul>
+<li><a class="reference external" href="">The wfdbtools module</a><ul>
+<li><a class="reference external" href="#rdsamp">rdsamp</a></li>
+<li><a class="reference external" href="#rdann">rdann</a></li>
+<li><a class="reference external" href="#rdhdr">rdhdr</a></li>
+<li><a class="reference external" href="#utilities">utilities</a></li>
 </ul>
 </li>
 <li><a class="reference external" href="#indices-and-tables">Indices and tables</a></li>
