@@ -22,12 +22,12 @@ Example Usage::
     >> print data.shape
     (3600, 4)
     >> pprint info
-    {'firstvalues': [995, 1011],
+    {'first_values': [995, 1011],
     'gains': [200, 200],
     'samp_count': 650000,
     'samp_freq': 360,
     'signal_names': ['MLII', 'V5'],
-    'zerovalues': [1024, 1024]}
+    'zero_values': [1024, 1024]}
     
     # And now read the annotation
     >> ann = rdann(record, 'atr', 0, 10)
@@ -131,9 +131,9 @@ def rdsamp(record, start=0, end=-1, interval=-1):
           'signal_names' - Names of each signal
           'samp_freq' - Sampling freq (samples / second)
           'samp_count' - Total samples in record
-          'firstvalues' - First value of each signal
+          'first_values' - First value of each signal
           'gains' - Gain for each signal
-          'zerovalues' - Zero value for each signal
+          'zero_values' - Zero value for each signal
     
     """
     # read the header file - output is a dict
@@ -267,67 +267,6 @@ def plot_data(data, info, ann=None):
 
     pylab.show()
 
-def rdhdr_old(record):
-    """
-    Returns the information read from the header file
-
-    Header file for each record has suffix '.hea' and
-    contains information about the record and each signal.
-
-    Parameters
-    ----------
-    record : str
-            Full path to record. Record name has no extension.
-
-    Returns
-    -------
-    info : dict
-          Information read from the header as a dictionary.
-          keys :
-          'signal_names' - Names of each signal
-          'samp_freq' - Sampling freq (samples / second)
-          'samp_count' - Total samples in record
-          'firstvalues' - First value of each signal
-          'gains' - Gain for each signal
-          'zerovalues' - Zero value for each signal
-    
-    """
-    headerfile = record + '.hea'
-    info = {}
-    info['gains'] = []; info['zerovalues'] = []
-    info['firstvalues'] = []; info['signal_names'] = []
-    fid = open(headerfile, 'r')
-    firstline = fid.readline()
-    recordname, signal_count, samp_freq, samp_count = firstline.split()
-    info['samp_freq'] = int(samp_freq)
-    info['samp_count'] = int(samp_count)
-    # Number of signal must be exactly 2
-    if int(signal_count) != 2:
-        raise ValueError, 'Input data must have exactly 2 signals'
-    
-    # load signal attributes
-    # TODO: more robust parsing 
-    for line_count in range(int(signal_count)):
-        (dummy,                       # filename
-         format_name,                 # should be 212
-         gain,                        # Integers per mV
-         dummy,                       # Bit Resolution
-         zerovalue,                   # value of zero point
-         firstvalue,                  # First value of signal
-         dummy,
-         dummy,
-         signal_name
-         ) = fid.readline().rstrip('\n').split()
-
-        if format_name != '212':
-            raise ValueError, 'Not in format 212'
-        
-        info['gains'].append(int(gain))
-        info['zerovalues'].append(int(zerovalue))
-        info['firstvalues'].append(int(firstvalue))
-        info['signal_names'].append(signal_name)
-    fid.close()
-    return info
 
 def rdhdr(record):
     """
@@ -349,9 +288,10 @@ def rdhdr(record):
           'signal_names' - Names of each signal
           'samp_freq' - Sampling freq (samples / second)
           'samp_count' - Total samples in record
-          'firstvalues' - First value of each signal
+          'first_values' - First value of each signal
           'gains' - Gain for each signal
-          'zerovalues' - Zero value for each signal
+          'zero_values' - Zero value for each signal
+          'signal_names' - Name/Descr for each signal
     
     """
     info = {'signal_names':[], 'gains':[], 'units':[],
@@ -413,7 +353,7 @@ def rdhdr(record):
         info['first_values'].append(float(first_value))
         info['signal_names'].append(signal_name)
 
-    pprint(info)
+    return info
         
 def _getheaderlines(record):
     """Read the header file and separate comment lines
@@ -468,7 +408,7 @@ def _get_read_limits(start, end, interval, info):
     if interval_end < start:
         interval_end = info['samp_count']
     end = min(end, interval_end, info['samp_count']) # use earlier end
-    return start, end
+    return int(start), int(end)
             
 def _read_data(record, start, end, info):
     """Read the binary data for each signal"""
@@ -481,7 +421,7 @@ def _read_data(record, start, end, info):
                         dtype=numpy.uint8).reshape(1,3))
     fid.close()
 
-    if [data[0, 2], data[0, 3]] != info['firstvalues']:
+    if [data[0, 2], data[0, 3]] != info['first_values']:
         warnings.warn(
             'First value from dat file does not match value in header')
     
@@ -494,8 +434,8 @@ def _read_data(record, start, end, info):
     data = _arr_to_data(arr)
 
     # adjust zerovalue and gain
-    data[:, 2] = (data[:, 2] - info['zerovalues'][0]) / info['gains'][0]
-    data[:, 3] = (data[:, 3] - info['zerovalues'][1]) / info['gains'][1]
+    data[:, 2] = (data[:, 2] - info['zero_values'][0]) / info['gains'][0]
+    data[:, 3] = (data[:, 3] - info['zero_values'][1]) / info['gains'][1]
 
     # time columns
     data[:, 0] = numpy.arange(start, end)  # elapsed time in samples
