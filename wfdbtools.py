@@ -44,6 +44,7 @@ Example Usage::
 # available at http://physionet.org/physiotools/matlab/rddata.m
 
 from __future__ import division
+import re
 import warnings
 import numpy
 import pylab
@@ -265,7 +266,7 @@ def plot_data(data, info, ann=None):
 
     pylab.show()
 
-def rdhdr(record):
+def rdhdr_old(record):
     """
     Returns the information read from the header file
 
@@ -327,6 +328,74 @@ def rdhdr(record):
     fid.close()
     return info
 
+def rdhdr(record):
+    """
+    Returns the information read from the header file
+
+    Header file for each record has suffix '.hea' and
+    contains information about the record and each signal.
+
+    Parameters
+    ----------
+    record : str
+            Full path to record. Record name has no extension.
+
+    Returns
+    -------
+    info : dict
+          Information read from the header as a dictionary.
+          keys :
+          'signal_names' - Names of each signal
+          'samp_freq' - Sampling freq (samples / second)
+          'samp_count' - Total samples in record
+          'firstvalues' - First value of each signal
+          'gains' - Gain for each signal
+          'zerovalues' - Zero value for each signal
+    
+    """
+    RECORD_REGEX = re.compile(r''.join([
+            "(?P<record>\d+)\/*(?P<seg_ct>\d*)\s", 
+            "(?P<sig_ct>\d+)\s*",
+            "(?P<samp_freq>\d*)\/?(?P<counter_freq>\d*)\(?(?P<base_counter>\d*)\)?\s*",
+            "(?P<samp_count>\d*)\s*",
+            "(?P<base_time>\d{,2}:*\d{,2}:*\d{,2})\s*",
+            "(?P<base_date>\d{,2}\/*\d{,2}\/*\d{,4})"]))
+
+    SIGNAL_REGEX = re.compile(r''.join([
+            "(?P<file_name>[0-9a-zA-Z._-]+)\s+",
+            "(?P<format>\d+)x{,1}(?P<samp_per_frame>\d*):*",
+            "(?P<skew>\d*)\+*(?P<byte_offset>\d*)\s*",
+            "(?P<adc_gain>\d*)\(?(?P<baseline>\d*)\)?\/?",
+            "(?P<units>\w*)\s*(?P<resolution>\d*)\s*",
+            "(?P<adc_zero>\d*)\s*(?P<init_value>\d*)\s*",
+            "(?P<checksum>[0-9-]*)\s*(?P<block_size>\d*)\s*",
+            "(?P<description>[a-zA-Z0-9\s]*)"]))
+
+    header_lines, comment_lines = _getheaderlines(record)
+    info = {}
+    print RECORD_REGEX.findall(header_lines[0])
+    print SIGNAL_REGEX.findall(header_lines[1])
+    print SIGNAL_REGEX.findall(header_lines[2])
+    
+def _getheaderlines(record):
+    """Read the header file and separate comment lines
+    and header lines"""
+    hfile = record + '.hea'
+    all_lines = open(hfile, 'r').readlines()
+    comment_lines = []
+    header_lines = []
+    # strip newlines
+    all_lines = [l.rstrip('\n').rstrip('\r') for l in all_lines]
+    # comments
+    for l in all_lines:
+        if l.startswith('#'):
+            comment_lines.append(l)
+        elif l.strip() != '':
+            header_lines.append(l)
+    
+    return header_lines, comment_lines
+
+    
 def _get_read_limits(start, end, interval, info):
     """
     Given start time, end time and interval
@@ -432,16 +501,16 @@ def main():
     """"""
     numpy.set_printoptions(precision=3, suppress=True)
     record  = '/data/Dropbox/programming/ECGtk/samples/format212/100'
-    data, info = rdsamp(record)
-    ann = rdann(record, 'atr') #, types=[1])
-    print data
-    print data[-1, 1:].tolist()
+    #data, info = rdsamp(record)
+    #ann = rdann(record, 'atr') #, types=[1])
+    #print data
+    #print data[-1, 1:].tolist()
     #print len(data)
     #print 'len(ann)', len(ann)
-    print ann
-    print len(ann)
-    print info
-
+    #print ann
+    #print len(ann)
+    #print info
+    rdhdr(record)
     #plot_data(data, info, ann)
     
 if __name__ == '__main__':
