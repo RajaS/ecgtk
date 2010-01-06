@@ -48,6 +48,7 @@ import re
 import warnings
 import numpy
 import pylab
+from pprint import pprint
 
 ## Annotation codes
 CODEDICT = {
@@ -353,6 +354,9 @@ def rdhdr(record):
           'zerovalues' - Zero value for each signal
     
     """
+    info = {'signal_names':[], 'gains':[], 'units':[],
+            'first_values':[], 'zero_values':[]}
+    
     RECORD_REGEX = re.compile(r''.join([
             "(?P<record>\d+)\/*(?P<seg_ct>\d*)\s", 
             "(?P<sig_ct>\d+)\s*",
@@ -362,21 +366,55 @@ def rdhdr(record):
             "(?P<base_date>\d{,2}\/*\d{,2}\/*\d{,4})"]))
 
     SIGNAL_REGEX = re.compile(r''.join([
-            "(?P<file_name>[0-9a-zA-Z._-]+)\s+",
+            "(?P<file_name>[0-9a-zA-Z\._/-]+)\s+",
             "(?P<format>\d+)x{,1}(?P<samp_per_frame>\d*):*",
             "(?P<skew>\d*)\+*(?P<byte_offset>\d*)\s*",
             "(?P<adc_gain>\d*)\(?(?P<baseline>\d*)\)?\/?",
             "(?P<units>\w*)\s*(?P<resolution>\d*)\s*",
-            "(?P<adc_zero>\d*)\s*(?P<init_value>\d*)\s*",
+            "(?P<adc_zero>\d*)\s*(?P<init_value>[\d-]*)\s*",
             "(?P<checksum>[0-9-]*)\s*(?P<block_size>\d*)\s*",
             "(?P<description>[a-zA-Z0-9\s]*)"]))
 
     header_lines, comment_lines = _getheaderlines(record)
-    info = {}
-    print RECORD_REGEX.findall(header_lines[0])
-    print SIGNAL_REGEX.findall(header_lines[1])
-    print SIGNAL_REGEX.findall(header_lines[2])
+    (record_name, seg_count, signal_count, samp_freq,
+     counter_freq, base_counter, samp_count,
+     base_time, base_date) = RECORD_REGEX.findall(header_lines[0])[0]
+
+    # use 250 if missing
+    if samp_freq == '':
+        samp_freq = 250
+    if samp_count == '':
+        samp_count = 0
+        
+        
+    info['samp_freq'] = float(samp_freq)
+    info['samp_count'] = int(samp_count)
     
+    for sig in range(2):
+        (file_name, format, samp_per_frame, skew,
+         byte_offset, gain, baseline, units,
+         resolution, zero_value, first_value,
+         checksum, blocksize, signal_name) = SIGNAL_REGEX.findall(header_lines[sig+1])[0]
+
+        print file_name
+        # replace with defaults for missing values
+        if gain == '' or gain == 0:
+            gain = 200
+        if units == '':
+            units = 'mV'
+        if zero_value == '':
+            zero_value = 0
+        if first_value == '':
+            first_value = 0   # do not use to check
+        
+        info['gains'].append(float(gain))
+        info['units'].append(units)
+        info['zero_values'].append(float(zero_value))
+        info['first_values'].append(float(first_value))
+        info['signal_names'].append(signal_name)
+
+    pprint(info)
+        
 def _getheaderlines(record):
     """Read the header file and separate comment lines
     and header lines"""
@@ -512,7 +550,26 @@ def main():
     #print info
     rdhdr(record)
     #plot_data(data, info, ann)
+
+def rdhdr_test():
+    header_files = ['samples/headers212/100',
+                    'samples/headers212/14046',
+                    'samples/headers212/300',
+                    'samples/headers212/40',
+                    'samples/headers212/800',
+                    'samples/headers212/chf01',
+                    'samples/headers212/s20011',
+                    'samples/headers212/sel100',
+                    'samples/headers212/header_with_blanklines',
+                    'samples/headers212/header_bellsandwhistles',
+                    'samples/headers212/header_bells',
+                    'samples/headers212/header_nobells',
+                    'samples/headers212/70701']
+    
+    for f in header_files:
+        print '\n\nstarting', f, '\n'
+        rdhdr(f)
     
 if __name__ == '__main__':
-    main()
+    rdhdr_test()
         
