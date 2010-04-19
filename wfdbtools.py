@@ -18,7 +18,8 @@ Example Usage::
 
     # Read in the data from 0 to 10 seconds
     >> data, info = rdsamp(record, 0, 10)
-    # data columns are time(samples), time(seconds), signal1, signal2
+    # returned data is an array. The columns are time(samples),
+    # time(seconds), signal1, signal2
     >> print data.shape
     (3600, 4)
     >> pprint info
@@ -31,7 +32,13 @@ Example Usage::
     
     # And now read the annotation
     >> ann = rdann(record, 'atr', 0, 10)
-
+    >> print(ann[:4,:])
+       array([[  18.   ,    0.05 ,   28.   ],
+              [  77.   ,    0.214,    1.   ],
+              [ 370.   ,    1.028,    1.   ],
+              [ 662.   ,    1.839,    1.   ]])
+    
+    
     # Plot the data and the mark the annotations
     >> plot_data(data, info, ann)
 
@@ -336,7 +343,6 @@ def rdhdr(record):
          resolution, zero_value, first_value,
          checksum, blocksize, signal_name) = SIGNAL_REGEX.findall(header_lines[sig+1])[0]
 
-        print file_name
         # replace with defaults for missing values
         if gain == '' or gain == 0:
             gain = 200
