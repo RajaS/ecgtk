@@ -508,8 +508,9 @@ def rdhdr_test():
     
     for f in header_files:
         print '\n\nstarting', f, '\n'
-        rdhdr(f)
-    
+        info = rdhdr(f)
+        pprint(info)
+        
 if __name__ == '__main__':
     rdhdr_test()
         

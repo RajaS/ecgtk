@@ -1,10 +1,9 @@
 """Tests for functions in the wfdbtools module."""
 
 import os
-from wfdbtools import rdsamp, rdann
+from wfdbtools import rdsamp, rdann, rdhdr
 
 testrecord = os.path.abspath('samples/format212/100')
-
 
 def rdsamp_test():
     """test wfdbtools.rdsamp"""
@@ -32,6 +31,24 @@ def rdann_test():
     assert len(ann) == 2274
     assert ann[0, :].tolist() == [18., 0.05, 28 ]
     assert ann[-1, 0] == 649991.
+
+def rdhdr_test():
+    """test wfdbtools.rdhdr"""
+    for record in ['samples/headers212/100',
+                   'samples/headers212/header_nobells',
+                   'samples/headers212/header_bellsandwhistles']:
+        info = rdhdr(record)
+        assert info['first_values'] == [995.0, 1011.0]
+        assert info['gains'] == [200.0, 200.0]
+        assert info['signal_names'] == ['MLII', 'V5']
+        assert info['units'] == ['mV', 'mV']
+        assert info['zero_values'] == [1024.0, 1024.0]
+
+    info = rdhdr('samples/headers212/7001')
+    assert info['first_values'] == [-53.0, -69.0]
+    assert info['gains'] == [100.0, 100.0]
+    assert info['samp_count'] == 525000
+        
     
 import nose
 nose.main()
