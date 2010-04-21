@@ -54,8 +54,11 @@ from __future__ import division
 import re
 import warnings
 import numpy
-import pylab
-from pprint import pprint
+#import pylab
+#from pprint import pprint
+
+
+__version__ = '0.2'
 
 ## Annotation codes
 CODEDICT = {
@@ -121,7 +124,7 @@ def rdsamp(record, start=0, end=-1, interval=-1):
     end    : int, optional
             time to end in seconds, defaults to end of record
     interval : int, optional
-            interval of data to be read.
+            interval of data to be read in seconds
             If both interval and end are given, earlier limit is used.
 
     Returns
@@ -184,10 +187,9 @@ def rdann(record, annotator, start=0, end=-1, types=[]):
     # get header data
     info = rdhdr(record)
     
-    annfile = record + '.' + annotator
-    fid = open(annfile, 'rb')
-    arr = numpy.fromstring(fid.read(), dtype = numpy.uint8).reshape((-1, 2))
-    fid.close()
+    annfile = ''.join((record, '.', annotator))
+    with open(annfile, 'rb') as f:
+        arr = numpy.fromstring(f.read(), dtype = numpy.uint8).reshape((-1, 2))
 
     rows = arr.shape[0]
     annot = []
@@ -215,15 +217,19 @@ def rdann(record, annotator, start=0, end=-1, types=[]):
     # last values are EOF indicator
     annot_time = annot_time[:-1]
     annot = annot[:-1]
+    
     # annot_time should be total elapsed samples
     annot_time = numpy.cumsum(annot_time)
     annot_time_ms = annot_time / info['samp_freq'] # in seconds
+    
     # limit to requested interval
     start, end = _get_read_limits(start, end, -1, info)
     ann = numpy.array([annot_time, annot_time_ms, annot]).transpose()
+    
     # filter by annot_time in interval
     ann =  ann[start <= ann[:, 0]]
     ann = ann[ann[:, 0] <= end]
+
     # filter by type
     if types != []:
         ann = ann[numpy.logical_or.reduce([ann[:,2] == x for x in types])]
@@ -249,8 +255,13 @@ def plot_data(data, info, ann=None):
     -------
     None
     Matplotlib figure is plotted with the signals and annotations.
-    
     """
+    try:
+        import pylab
+    except ImportError:
+        warnings.warn("Could not import pylab. Abandoning plotting")
+        return
+        
     time = data[:, 1] #in seconds. use data[:, 0] to use sample no.
     sig1 = data[:, 2]
     sig2 = data[:, 3]
@@ -422,21 +433,20 @@ def _read_data(record, start, end, info):
     samp_to_read = end - start
 
     # verify against first value in header
-    fid = open(datfile, 'rb')
-    data = _arr_to_data(numpy.fromstring(fid.read(3),
+    with open(datfile, 'rb') as f:
+        data = _arr_to_data(numpy.fromstring(f.read(3),
                         dtype=numpy.uint8).reshape(1,3))
-    fid.close()
 
     if [data[0, 2], data[0, 3]] != info['first_values']:
         warnings.warn(
             'First value from dat file does not match value in header')
     
     # read into an array with 3 bytes in each row
-    fid = open(datfile, 'rb')
-    fid.seek(start*3)
-    arr = numpy.fromstring(fid.read(3*samp_to_read),
+    with open(datfile, 'rb') as f:
+        f.seek(start*3)
+        arr = numpy.fromstring(f.read(3*samp_to_read),
                 dtype=numpy.uint8).reshape((samp_to_read, 3))
-    fid.close()
+
     data = _arr_to_data(arr)
 
     # adjust zerovalue and gain
@@ -482,41 +492,13 @@ def get_annotation_code(code=None):
     return CODEDICT[code]
 
 def main():
-    """"""
-    numpy.set_printoptions(precision=3, suppress=True)
-    record  = '/data/Dropbox/programming/ECGtk/samples/format212/100'
-    #data, info = rdsamp(record)
-    #ann = rdann(record, 'atr') #, types=[1])
-    #print data
-    #print data[-1, 1:].tolist()
-    #print len(data)
-    #print 'len(ann)', len(ann)
-    #print ann
-    #print len(ann)
-    #print info
-    rdhdr(record)
-    #plot_data(data, info, ann)
-
-def rdhdr_test():
-    header_files = ['samples/headers212/100',
-                    'samples/headers212/14046',
-                    'samples/headers212/300',
-                    'samples/headers212/40',
-                    'samples/headers212/800',
-                    'samples/headers212/chf01',
-                    'samples/headers212/s20011',
-                    'samples/headers212/sel100',
-                    'samples/headers212/header_with_blanklines',
-                    'samples/headers212/header_bellsandwhistles',
-                    'samples/headers212/header_bells',
-                    'samples/headers212/header_nobells',
-                    'samples/headers212/70701']
-    
-    for f in header_files:
-        print '\n\nstarting', f, '\n'
-        info = rdhdr(f)
-        pprint(info)
+    """Run tests when called directly"""
+    import nose
+    print "-----------------"
+    print "Running the tests"
+    print "-----------------"
+    nose.main()
         
 if __name__ == '__main__':
-    rdhdr_test()
+    main()
         
