@@ -1,5 +1,25 @@
 #!/usr/bin/env python
 
+##########################################################
+# A python module to access data from WFDB
+# Copyright (C) 2009, 2010  Raja Selvaraj <rajajs@gmail.com>
+
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+##########################################################
+
+
 """
 The WFDB (Waveform Database) software package is a set of tools
 for accessing and using the waveform data in Physiobank. 
@@ -43,9 +63,6 @@ Example Usage::
     >> plot_data(data, info, ann)
 
 """
-# Author: Raja Selvaraj <rajajs@gmail.com>
-# Written in December 2009
-# License: GPL
 
 # rdsamp based on rddata.m for matlab written by Robert Tratnig
 # available at http://physionet.org/physiotools/matlab/rddata.m

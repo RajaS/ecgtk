@@ -3,7 +3,8 @@
 import os
 from wfdbtools import rdsamp, rdann, rdhdr
 
-testrecord = os.path.abspath('samples/format212/100')
+testdir = os.path.abspath('samples/format212/')
+testrecord = os.path.join(testdir, '100')
 
 def rdsamp_test():
     """test wfdbtools.rdsamp"""
@@ -34,9 +35,10 @@ def rdann_test():
 
 def rdhdr_test():
     """test wfdbtools.rdhdr"""
-    for record in ['samples/headers212/100',
-                   'samples/headers212/header_nobells',
-                   'samples/headers212/header_bellsandwhistles']:
+    for rec in ['100',
+                'header_nobells',
+                'header_bellsandwhistles']:
+        record = os.path.join(testdir, rec)
         info = rdhdr(record)
         assert info['first_values'] == [995.0, 1011.0]
         assert info['gains'] == [200.0, 200.0]
@@ -44,7 +46,7 @@ def rdhdr_test():
         assert info['units'] == ['mV', 'mV']
         assert info['zero_values'] == [1024.0, 1024.0]
 
-    info = rdhdr('samples/headers212/7001')
+    info = rdhdr(os.path.join(testdir, '7001'))
     assert info['first_values'] == [-53.0, -69.0]
     assert info['gains'] == [100.0, 100.0]
     assert info['samp_count'] == 525000
