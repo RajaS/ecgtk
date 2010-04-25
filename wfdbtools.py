@@ -232,7 +232,7 @@ def rdann(record, annotator, start=0, end=-1, types=[]):
 
     # filter by type
     if types != []:
-        ann = ann[numpy.logical_or.reduce([ann[:,2] == x for x in types])]
+        ann = ann[numpy.logical_or.reduce([ann[:, 2] == x for x in types])]
         #ann = ann[numpy.array([ann[x, 2] in types for x in range(len(ann))])]
 
     return ann
@@ -272,13 +272,13 @@ def plot_data(data, info, ann=None):
     pylab.ylabel('%s (mV)' %(info['signal_names'][0]))
     
     pylab.subplot(212)
-    pylab.plot(time, data[:, 3], 'k')
+    pylab.plot(time, sig2, 'k')
     pylab.ylabel('%s (mV)' %(info['signal_names'][1])) 
     pylab.xlabel('Time (seconds)')
 
     if ann != None:
         # annotation time in samples from start
-        ann_x = (ann[:, 0] - data[0,0]).astype('int')
+        ann_x = (ann[:, 0] - data[0, 0]).astype('int')
         pylab.plot(ann[:, 1], data[ann_x, 3], 'xr')
         pylab.subplot(211)
         pylab.plot(ann[:, 1], data[ann_x, 2], 'xr')
@@ -349,10 +349,11 @@ def rdhdr(record):
     info['samp_count'] = int(samp_count)
     
     for sig in range(2):
-        (file_name, format, samp_per_frame, skew,
+        (file_name, file_format, samp_per_frame, skew,
          byte_offset, gain, baseline, units,
          resolution, zero_value, first_value,
-         checksum, blocksize, signal_name) = SIGNAL_REGEX.findall(header_lines[sig+1])[0]
+         checksum, blocksize, signal_name) = SIGNAL_REGEX.findall(
+                                             header_lines[sig+1])[0]
 
         # replace with defaults for missing values
         if gain == '' or gain == 0:
@@ -455,7 +456,8 @@ def _read_data(record, start, end, info):
 
     # time columns
     data[:, 0] = numpy.arange(start, end)  # elapsed time in samples
-    data[:, 1] = (numpy.arange(samp_to_read) + start) / info['samp_freq'] # in sec
+    data[:, 1] = (numpy.arange(samp_to_read) + start
+                  ) / info['samp_freq'] # in sec
     return data
 
 def _arr_to_data(arr):
