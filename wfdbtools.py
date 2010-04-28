@@ -74,7 +74,7 @@ import numpy
 #import pylab
 #from pprint import pprint
 
-
+__author__ = 'Raja Selvaraj <rajajs@gmail.com>'
 __version__ = '0.2'
 
 ## Annotation codes
