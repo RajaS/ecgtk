@@ -21,7 +21,7 @@
 
 
 """
-A pure python module for accessing and using the waveform data in Physiobank. 
+A pure python module for accessing and using the waveform data in `Physiobank <http://www.physionet.org/physiobank/>`_. 
 Provides `rdsamp` and `rdann` which are the python equivalents of the wfdb applications
 of similar names.
 A deliberate attempt is made to try to keep names and usage similar to the
