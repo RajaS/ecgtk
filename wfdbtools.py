@@ -21,11 +21,15 @@
 
 
 """
-The WFDB (Waveform Database) software package is a set of tools
-for accessing and using the waveform data in Physiobank. 
-This module intends to provide some of the wfdb tools in pure python.
+A pure python module for accessing and using the waveform data in Physiobank. 
+Provides `rdsamp` and `rdann` which are the python equivalents of the wfdb applications
+of similar names.
 A deliberate attempt is made to try to keep names and usage similar to the
 original wfdb applications for simplicity of use.
+
+The only dependency that will need to be installed is numpy. However, to use the function
+`plot_data`, which is an utility function for interactive use, you need to have matplotlib
+also installed.
 
 Example Usage::
 
@@ -38,10 +42,13 @@ Example Usage::
 
     # Read in the data from 0 to 10 seconds
     >> data, info = rdsamp(record, 0, 10)
+    
     # returned data is an array. The columns are time(samples),
     # time(seconds), signal1, signal2
     >> print data.shape
     (3600, 4)
+
+    # info is a dictionary containing header information
     >> pprint info
     {'first_values': [995, 1011],
     'gains': [200, 200],
@@ -52,6 +59,8 @@ Example Usage::
     
     # And now read the annotation
     >> ann = rdann(record, 'atr', 0, 10)
+
+    # ann has 3 columns - sample number, time (sec) and annotation code
     >> print(ann[:4,:])
        array([[  18.   ,    0.05 ,   28.   ],
               [  77.   ,    0.214,    1.   ],
