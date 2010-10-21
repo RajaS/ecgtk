@@ -370,11 +370,12 @@ def rdhdr(record):
     if samp_count == '':
         samp_count = 0
         
-        
+
+    info['signal_count'] = int(signal_count)
     info['samp_freq'] = float(samp_freq)
     info['samp_count'] = int(samp_count)
     
-    for sig in range(2):
+    for sig in range(info['signal_count']):
         (file_name, file_format, samp_per_frame, skew,
          byte_offset, gain, baseline, units,
          resolution, zero_value, first_value,
