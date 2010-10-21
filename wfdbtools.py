@@ -73,6 +73,13 @@ Example Usage::
 
 """
 
+## Changelog
+
+# 21-10-2010 rdhdr now supports multichannel recordings
+
+# ver0.2
+
+
 # rdsamp based on rddata.m for matlab written by Robert Tratnig
 # available at http://physionet.org/physiotools/matlab/rddata.m
 
@@ -338,6 +345,7 @@ def rdhdr(record):
     info : dict
           Information read from the header as a dictionary.
           keys :
+          'signal_count' - Number of signals
           'signal_names' - Names of each signal
           'samp_freq' - Sampling freq (samples / second)
           'samp_count' - Total samples in record
@@ -345,6 +353,7 @@ def rdhdr(record):
           'gains' - Gain for each signal
           'zero_values' - Zero value for each signal
           'signal_names' - Name/Descr for each signal
+          'file_format' - format for each signal
     
     """
     info = {'signal_names':[], 'gains':[], 'units':[],
@@ -468,10 +477,46 @@ def _get_read_limits(start, end, interval, info):
 
 def _read_data_16(record, start, end, info):
     """Read binary data from format 16 files"""
-    pass
+    datfile = record + '.dat'
+    samp_to_read = end - start
+    signal_count = info['signal_count']
+    
+    # verification
+    
+    with open(datfile, 'rb') as f:
+        firstvals = numpy.fromstring(f.read(2*signal_count),
+                                     dtype=numpy.int16).reshape(1,signal_count)
+        firstvals = list(firstvals[0,:].astype('float'))
+        
+    if firstvals != info['first_values']:
+        warnings.warn(
+            'First value from dat file does not match value in header')
 
+        
+    # read the values into an array
+    with open(datfile, 'rb') as f:
+        f.seek(start*signal_count*2)
+        arr = numpy.fromstring(f.read(2*signal_count*samp_to_read),
+                               dtype=numpy.int16).reshape(samp_to_read, signal_count)
+
+    return arr
+
+        
 def _read_data_212(record, start, end, info):
     """Read the binary data for each signal"""
+    def _arr_to_data(arr):
+        """Use bit level operations to read the binary data"""
+        second_col = arr[:, 1].astype('int')
+        bytes1 = second_col & 15 # bytes belonging to first sample
+        bytes2 = second_col >> 4 # belongs to second sample
+        sign1 = (second_col & 8) << 9 # sign bit for first sample
+        sign2 = (second_col & 128) << 5 # sign bit for second sample
+        # data has columns - samples, time(ms), signal1 and signal2
+        data = numpy.zeros((arr.shape[0], 4), dtype='float')
+        data[:, 2] = (bytes1 << 8) + arr[:, 0] - sign1
+        data[:, 3] = (bytes2 << 8) + arr[:, 2] - sign2
+        return data
+    
     datfile = record + '.dat'
     samp_to_read = end - start
 
@@ -502,19 +547,19 @@ def _read_data_212(record, start, end, info):
                   ) / info['samp_freq'] # in sec
     return data
 
-def _arr_to_data(arr):
-    """From the numpy array read from the dat file
-    using bit level operations, extract the 12-bit data"""
-    second_col = arr[:, 1].astype('int')
-    bytes1 = second_col & 15 # bytes belonging to first sample
-    bytes2 = second_col >> 4 # belongs to second sample
-    sign1 = (second_col & 8) << 9 # sign bit for first sample
-    sign2 = (second_col & 128) << 5 # sign bit for second sample
-    # data has columns - samples, time(ms), signal1 and signal2
-    data = numpy.zeros((arr.shape[0], 4), dtype='float')
-    data[:, 2] = (bytes1 << 8) + arr[:, 0] - sign1
-    data[:, 3] = (bytes2 << 8) + arr[:, 2] - sign2
-    return data
+# def _arr_to_data(arr):
+#     """From the numpy array read from the dat file
+#     using bit level operations, extract the 12-bit data"""
+#     second_col = arr[:, 1].astype('int')
+#     bytes1 = second_col & 15 # bytes belonging to first sample
+#     bytes2 = second_col >> 4 # belongs to second sample
+#     sign1 = (second_col & 8) << 9 # sign bit for first sample
+#     sign2 = (second_col & 128) << 5 # sign bit for second sample
+#     # data has columns - samples, time(ms), signal1 and signal2
+#     data = numpy.zeros((arr.shape[0], 4), dtype='float')
+#     data[:, 2] = (bytes1 << 8) + arr[:, 0] - sign1
+#     data[:, 3] = (bytes2 << 8) + arr[:, 2] - sign2
+#     return data
 
 def get_annotation_code(code=None):
     """Returns the symbolic definition for the wfdb annotation code.
