@@ -51,8 +51,11 @@ def rdhdr_test():
     assert info['gains'] == [100.0, 100.0]
     assert info['samp_count'] == 525000
 
-
-    
+    # multichannel_header
+    record = os.path.abspath('samples/format16/twa01')
+    info = rdhdr(record)
+    assert info['signal_count'] == 12
+    assert info['signal_names'] ==  ['I', 'II', 'III', 'aVR', 'aVL', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
     
     
 import nose

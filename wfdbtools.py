@@ -133,6 +133,7 @@ CODEDICT = {
     }
 
 
+
 def rdsamp(record, start=0, end=-1, interval=-1):
     """
     Read signals from a format 212 record from Physionet database.
@@ -176,8 +177,16 @@ def rdsamp(record, start=0, end=-1, interval=-1):
     info = rdhdr(record)
     # establish start and end in samples
     start, end = _get_read_limits(start, end, interval, info)
+
     # read the data
-    data = _read_data(record, start, end, info) 
+    signal_format = info['file_format'][0] # assume all sig have same format
+
+    # TODO: 
+    if signal_format == '212':
+        data = _read_data_212(record, start, end, info)
+    elif signal_format == '16':
+        data = _read_data_16(record, start, end, info)
+        
     return data, info
 
 def rdann(record, annotator, start=0, end=-1, types=[]):
@@ -339,7 +348,7 @@ def rdhdr(record):
     
     """
     info = {'signal_names':[], 'gains':[], 'units':[],
-            'first_values':[], 'zero_values':[]}
+            'first_values':[], 'zero_values':[], 'file_format':[]}
     
     RECORD_REGEX = re.compile(r''.join([
             "(?P<record>\d+)\/*(?P<seg_ct>\d*)\s", 
@@ -397,6 +406,7 @@ def rdhdr(record):
         info['zero_values'].append(float(zero_value))
         info['first_values'].append(float(first_value))
         info['signal_names'].append(signal_name)
+        info['file_format'].append(file_format)
 
     return info
         
