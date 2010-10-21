@@ -50,7 +50,10 @@ def rdhdr_test():
     assert info['first_values'] == [-53.0, -69.0]
     assert info['gains'] == [100.0, 100.0]
     assert info['samp_count'] == 525000
-        
+
+
+    
+    
     
 import nose
 nose.main()
