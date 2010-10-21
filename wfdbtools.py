@@ -499,7 +499,24 @@ def _read_data_16(record, start, end, info):
         arr = numpy.fromstring(f.read(2*signal_count*samp_to_read),
                                dtype=numpy.int16).reshape(samp_to_read, signal_count)
 
-    return arr
+    # adjust zero_value and gain
+    # TODO: make this common code handling any number of channels
+    data = arr.astype('float')
+    rows, cols = data.shape
+    for c in range(cols):
+        data[:, c] = (data[:, c] - info['zero_values'][c]) / info['gains'][c]
+
+
+    # add time columns
+    timecols = numpy.zeros((rows, 2), dtype = 'float')
+    
+    timecols[:, 0] = numpy.arange(start, end)
+    timecols[:, 1] = (numpy.arange(samp_to_read) + start) / info['samp_freq']
+
+    # concat
+    data = numpy.concatenate((timecols, data), axis=1)
+        
+    return data
 
         
 def _read_data_212(record, start, end, info):
