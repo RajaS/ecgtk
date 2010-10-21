@@ -453,8 +453,13 @@ def _get_read_limits(start, end, interval, info):
         interval_end = info['samp_count']
     end = min(end, interval_end, info['samp_count']) # use earlier end
     return int(start), int(end)
-            
-def _read_data(record, start, end, info):
+
+
+def _read_data_16(record, start, end, info):
+    """Read binary data from format 16 files"""
+    pass
+
+def _read_data_212(record, start, end, info):
     """Read the binary data for each signal"""
     datfile = record + '.dat'
     samp_to_read = end - start
