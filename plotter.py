@@ -31,6 +31,12 @@ class EGMPlotter(wx.Frame):
 
         self.show_cursor()
         self.SHOW_CURSOR = False
+
+        # test - load a sample file
+        self.datafile = '/data/Dropbox/work/jipmer_research/Uni_Ebsteins/gejalakshmi/succ.txt'
+        self.load_data(self.datafile, 'bard') #TODO: need to be able to specify format
+
+
         
     def _layout(self):
         mainsizer = wx.BoxSizer()
@@ -107,16 +113,23 @@ class EGMPlotter(wx.Frame):
 
     def change_scale(self, ratio):
         """Change scale of the selected signal by the ratio"""
-        self.scales[self.SELECTED_SIG] *= ratio
+        self.gains[self.SELECTED_SIG] *= ratio
 
+        #self.depths[self.SELECTED_SIG] *= ratio
+        #self.hts[self.SELECTED_SIG] *= ratio
         self.xmin, self.xmax = self.axis.get_xlim()
-        self.ranges, self.offsets = self.calculate_scaling(self.data)
-        self.offsets = self.calculate_offsets(self.scales)
+        self.ranges, self.depths, self.hts = self.get_range_ht_depth()
+        self.offsets = self.calculate_offsets(self.depths, self.hts)
         
         # refresh plots
-        self.display_data = self.tru2display(self.data,
-                                             self.ranges, self.scales, self.offsets)
+        self.display_data = self.raw2display(self.data, self.ranges, self.offsets)
 
+        print 'ranges', self.ranges
+        print 'heights', self.hts
+        print 'depths', self.depths
+        print 'offsets', self.offsets
+        print '-------------\n'
+        
         self.plot_data()
         return
             
@@ -125,12 +138,13 @@ class EGMPlotter(wx.Frame):
         """change the selected signal.
         Do not change x axis limits"""
         xlim = self.axis.get_xlim()
+        ylim = self.axis.get_ylim()
         self.axis.plot(self.display_data[:, self.PREV_SELECTION], 'black')
         self.axis.plot(self.display_data[:, self.SELECTED_SIG], 'blue')
         self.axis.set_xlim(*xlim)
+        self.axis.set_ylim(*ylim)
         
         self.plotpanel.canvas.draw()
-        #self.plotpanel.Refresh()
             
 
     def on_mpl(self, event):
@@ -172,10 +186,11 @@ class EGMPlotter(wx.Frame):
         # initial values for xrange
         self.xmin = 0; self.xmax = self.n_samp
 
-        self.ranges, self.offsets = self.calculate_scaling(self.data)
+        self.ranges, self.depths, self.hts = self.get_range_ht_depth()
 
-        self.display_data = self.tru2display(self.data,
-                                        self.ranges, self.scales, self.offsets)
+        self.offsets = self.calculate_offsets(self.depths, self.hts)
+
+        self.display_data = self.raw2display(self.data, self.ranges, self.offsets)
 
         self.FIRST_PLOT = True
         
@@ -197,9 +212,10 @@ class EGMPlotter(wx.Frame):
         # redraws maintain x axis limits
         if not self.FIRST_PLOT:
             self.axis.set_xlim(*xlim)
-            
-        self.axis.set_ylim(self.offsets[-1] - self.scales[-1]/2.0,
-                           self.offsets[0] + self.scales[0]/2.0)
+
+        self.axis.set_ylim(self.offsets[-1] - self.depths[-1],
+                           self.offsets[0] + self.hts[0])
+
         self.plotpanel.canvas.draw()
 
         self.FIRST_PLOT = False
@@ -211,52 +227,71 @@ class EGMPlotter(wx.Frame):
         self.PREV_SELECTION = 0
 
         self.n_samp, self.n_sig = self.data.shape
-        self.scales = [1] * self.n_sig
+        self.gains = [1] * self.n_sig
         
-        
-    def calculate_scaling(self, data):
-        """calculate current ranges and offsets"""
+
+    def get_range_ht_depth(self):
+        """get values for ranges, hts and depths for current display.
+        Relative size of signals is given by self.gains.
+        Need to update on change in x axis"""
+        hts = []
+        depths = []
         ranges = []
-
-        for i in range(self.n_sig):
-            sig = data[self.xmin:self.xmax, i]
-            ranges.append(max(sig) - min(sig))
-
-        offsets = self.calculate_offsets(self.scales)
-        return ranges, offsets
-
-
-    def calculate_offsets(self, scales):
-        """Given the scales of the signals calculate offsets.
-        first offset will always be 0.
-        subsequent ones must be adjusted so there is no signal overlap"""
-        offsets = [0]
-        for i in range(len(scales)-1):
-            offsets.append(offsets[-1] + (scales[i] + scales[i+1]) / 2.0)
-
-        # invert offsets
-        offsets = [offsets[-1] - offset for offset in offsets]
+        #offsets = []
         
+        n_samp, n_sig = self.data.shape
+        for i in range(n_sig):
+            sig = self.data[self.xmin:self.xmax, i]
+
+            max_val = max(sig)
+            min_val = min(sig)
+            mean_val = numpy.mean(sig)
+
+            ranges.append(max_val - min_val)
+            hts.append((max_val - mean_val) * self.gains[i] / ranges[-1])
+            depths.append((mean_val - min_val) * self.gains[i] / ranges[-1])
+            
+        return ranges, depths, hts
+        # offsets = self.calculate_offsets(depths, hts)
+            
+        # #print 'ranges', ranges
+        # print 'offsets', offsets
+        # print 'hts', self.hts
+        # print 'depths', self.depths
+        # return ranges, offsets
+
+
+    def calculate_offsets(self, depths, hts):
+        """calculate offsets from ht and depths of individual signals.
+        The signals have to be arranged from top to bottom.
+        Each signal will have height equal to its gain (self.gains).
+        Total y axis height will therefore be sum of gains"""
+        offsets = [depths[0]] # first offset
+
+        for i in range(self.n_sig - 1):
+            offsets.append(offsets[-1] + hts[-1 - i] + depths[-2 - i])
+
+        offsets.reverse()
+
         return offsets
-    
         
-    def tru2display(self, data, ranges, scales, offsets):
-        """Convert the array data so that the
-        columns can be plotted as signals of equal range
-        without overlapping
-        """
+
+    def raw2display(self, data, ranges, offsets):
+        """convert raw data to number suitable for plotting.
+        ranges are the scaling factor for each signal.
+        offsets are also for each signal.
+        Gains is relative gain to apply for each signal"""
         display = numpy.copy(data)
         n_samp, n_sig = display.shape
 
-        # scale and offset each signal
         for i in range(n_sig):
-            display[:, i] /= (ranges[i] / scales[i])
+            display[:, i] *= self.gains[i] / ranges[i]
             display[:, i] += offsets[i]
 
         return display
 
 
-        
+    
 class PlotPanel(wx.Panel):
     """
     Panel with embedded matplotlib plots
