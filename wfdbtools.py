@@ -75,6 +75,7 @@ Example Usage::
 
 ## Changelog
 
+# 21-10-2010 rdsamp supports format 16 files with any number of signals
 # 21-10-2010 rdhdr now supports multichannel recordings
 
 # ver0.2
