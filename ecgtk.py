@@ -124,8 +124,12 @@ def _write_ann(self, qrs_peaks, annfile):
                                     qrs, 'N', 0, 0, 0))
     fi.close()
 
+    
 class ECG():
     def __init__(self, ecg, samplingrate = 1000):
+        """
+        ecg is a single channel of data
+        """
         self.ecg = ecg
         self.samplingrate = samplingrate
     
@@ -158,13 +162,13 @@ class ECG():
         self.ecg -= spliney
         return
 
-        def write_ann(self, annfile):
-            """Write an annotation file for the QRS onsets in a format
-            that is usable with wrann"""
-            fi = open(annfile, 'w')
-            for qrspeak in self.QRSpeaks:
-                fi.write('%s '*4 + '%s\n' %(self._sample_to_time(qrspeak), qrspeak, 'N', 0, 0, 0))
-            fi.close()
+    def write_ann(self, annfile):
+        """Write an annotation file for the QRS onsets in a format
+        that is usable with wrann"""
+        fi = open(annfile, 'w')
+        for qrspeak in self.QRSpeaks:
+            fi.write('%s '*4 + '%s\n' %(self._sample_to_time(qrspeak), qrspeak, 'N', 0, 0, 0))
+        fi.close()
 
 
 def test_remove_baseline():
