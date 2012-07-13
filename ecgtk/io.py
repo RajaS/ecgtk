@@ -20,19 +20,30 @@ class BardReader():
             self.header = self.get_header(fi)
 
         # extraxt some header information
-        self.info = self.parse_header_info()
+        self.info, amp_range = self.parse_header_info()
 
         with open(datafile) as fi:
             self.data = self.read_data(fi)
 
         # convert data values to microV
-        # multiply by 
-        #          5 - range
-        #          2 - extend range on either side
-        #          1000 - convert to microV
-        #          16 - bit depth
-        m = 2 * 5 * 1000 / 2 ** 16
-        self.data = self.data * m
+        self.data = self.in_microV(self.data, amp_range)
+
+
+    def in_microV(self, data, amp_range):
+        """
+        convert the data values in microV
+        amp_range is a list, 
+            each value is the analog range in V for each channel
+        """
+        # 2 - extend range on either side
+        # 1000 - convert to microV
+        # 16 - bit depth
+        print self.info
+        print amp_range
+        for chan in range(self.info['channelcount']):
+            m = 2 * amp_range[chan] * 1000 / 2 ** 16
+            data[:, chan] = data[:, chan] * m
+        return data
 
 
     def get_header(self, fi):
@@ -54,7 +65,7 @@ class BardReader():
         info['channellabels'] = []
 
         # channel specific info
-        info['range'] = []  # ampl range
+        amp_range = []  # ampl range
 
         for line in self.header:
             if line.startswith('Channels exported'):
@@ -70,12 +81,12 @@ class BardReader():
             elif line.startswith('Label'):
                 info['channellabels'].append(line.split(':')[1].strip())
             elif line.startswith('Range'): 
-                info['range'].append(line.split(':')[1].rstrip('mv \r\n'))
+                amp_range.append(float(line.split(':')[1].rstrip('mv \r\n')))
 
             else:
                 continue
 
-        return info
+        return info, amp_range
 
 
     def read_data(self, fi):
