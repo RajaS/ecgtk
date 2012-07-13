@@ -4,6 +4,7 @@
 
 # License: GPL
 
+from __future__ import division
 import numpy
 
 
@@ -23,6 +24,15 @@ class BardReader():
 
         with open(datafile) as fi:
             self.data = self.read_data(fi)
+
+        # convert data values to microV
+        # multiply by 
+        #          5 - range
+        #          2 - extend range on either side
+        #          1000 - convert to microV
+        #          16 - bit depth
+        m = 2 * 5 * 1000 / 2 ** 16
+        self.data = self.data * m
 
 
     def get_header(self, fi):
@@ -59,9 +69,8 @@ class BardReader():
             # extract channel labels
             elif line.startswith('Label'):
                 info['channellabels'].append(line.split(':')[1].strip())
-            elif line.startswith('Range'):
+            elif line.startswith('Range'): 
                 info['range'].append(line.split(':')[1].rstrip('mv \r\n'))
-
 
             else:
                 continue
@@ -77,14 +86,14 @@ class BardReader():
 
     
 def test():
-    f = '/data/Dropbox/work/jipmer_research/automated_WPW_study/Gejalakshmi/succ.txt'
+    f =  '/data/Dropbox/work/jipmer_research/post_MI_risk/patient_data/first_case/nsr.txt'
     br = BardReader(f)
 
-    print br.info
+    # print br.info
 
-    print br.data.shape
+    # print br.data.shape
 
-    print br.data
+    # print br.data
 
     assert br.data.shape == (br.info['samp_count'],
                               br.info['channelcount'])
