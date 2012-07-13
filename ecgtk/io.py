@@ -27,6 +27,7 @@ class BardReader():
 
         # convert data values to microV
         self.data = self.in_microV(self.data, amp_range)
+        self.info['units'] = 'microV'
 
 
     def in_microV(self, data, amp_range):
@@ -100,11 +101,11 @@ def test():
     f =  '/data/Dropbox/work/jipmer_research/post_MI_risk/patient_data/first_case/nsr.txt'
     br = BardReader(f)
 
-    # print br.info
+    print br.info
 
-    # print br.data.shape
+    print br.data.shape
 
-    # print br.data
+    print br.data
 
     assert br.data.shape == (br.info['samp_count'],
                               br.info['channelcount'])
