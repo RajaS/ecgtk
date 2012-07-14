@@ -420,7 +420,7 @@ class QRSDetector():
          wn = [5/ Nyq, 15 / Nyq]
          b,a = scipy.signal.butter(2, wn, btype = 'bandpass')
          # TODO: filtfilt should be implemented here
-         return ecgtools.basic_tools.filtfilt(b,a,ecg)
+         return filtfilt(b,a,ecg)
 
     def multilead_peak_match(self, peaks):
         """Reconcile QRS detections from multiple leads.
@@ -480,8 +480,8 @@ class ECG():
         anchorx is a vector of isoelectric points (usually qrs onset -20ms)
         window is width of window to use (in ms) for averaging the amplitude at anchors
         """
-        for chan in self.data.shape[1]:
-            ecg = self.data[:,chan]
+        for chan in range(self.data.shape[1]):
+            ecg = self.data[:,chan]                    
             windowwidth = _ms_to_samples(window, self.samplingrate) / 2
             #Do we have enough points before first anchor to use it
             if anchorx[0] < windowwidth:
@@ -495,7 +495,7 @@ class ECG():
             # or average around the anchor
             else:
                 anchory = scipy.array([scipy.mean(ecg[x-windowwidth:x+windowwidth])
-            for x in anchorx])
+                          for x in anchorx])
             # x values for spline that we are going to calculate
             splinex = scipy.array(range(len(ecg)))
             # calculate cubic spline fit
@@ -503,16 +503,19 @@ class ECG():
             spliney = scipy.interpolate.splev(splinex, tck)
             # subtract the spline
             ecg -= spliney
+            self.data[:, chan] = ecg
 
-        self.data[:, chan] = ecg
-
+            # if chan == 7:
+            #     pylab.plot(ecg)
+            #     pylab.plot(anchorx, anchory, 'or')
+            #     pylab.show()
 
     def get_qrsonsets(self, qrslead):
         """
         Using pan tomkins method detect qrs onsets
         currently only qrs peak is detected
         """
-        det = QRSDetector(self.data[:, qrslead], self.info['samplingrate'])
+        det = QRSDetector(self.data[:, qrslead], self.samplingrate)
         self.qrsonsets = det.qrs_detect()
 
 
@@ -671,11 +674,37 @@ def test_remove_baseline():
     anchors = range(0,len(testsignal), len(testsignal)//8)
     window = 0
 
-    ecg = ECG(testsignal, 1)
-    rms_with_baseline = _rms(ecg.ecg)
+    ecg = ECG(testsignal)
+    rms_with_baseline = _rms(ecg.data)
     ecg.remove_baseline(anchors, window)
-    rms_without_baseline = _rms(ecg.ecg)
+    rms_without_baseline = _rms(ecg.data)
     assert rms_without_baseline / rms_with_baseline < 0.01
 
+
+def test():
+    from io import BardReader
+    f = '/data/Dropbox/work/jipmer_research/post_MI_risk/patient_data/first_case/avpace90_3.txt'
+    #f = '/data/Dropbox/work/jipmer_research/post_MI_risk/patient_data/first_case/nsr.txt'    
+    br = BardReader(f)
+    data, info = br.read()
+
+    print 'loaded data', data.shape
+
+    print info
+
+    ecg = ECG(data, info)
+    ecg.get_qrsonsets(7)
+
+    print 'found qrspeaks', len(ecg.qrsonsets)
+ 
+    pylab.plot(data[:, 7])
+    pylab.hold(1)
+    ecg.remove_baseline(ecg.qrsonsets-240, 20)
+
+    pylab.plot(ecg.data[:,7], 'r')
+    for q in ecg.qrsonsets:
+        pylab.plot(q-240, 400, 'xr')
+    pylab.show()
+
 if __name__ == '__main__':
-    pass
+    test()
