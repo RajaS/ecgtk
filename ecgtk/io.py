@@ -15,22 +15,25 @@ class BardReader():
         """datafile is the full path to the exported file"""
         self.datafile = datafile
 
+    def read(self):
         # read header
-        with open(datafile) as fi:
+        with open(self.datafile) as fi:
             self.header = self.get_header(fi)
 
-        # extraxt some header information
-        self.info, amp_range = self.parse_header_info()
+        # extract some header information
+        info, amp_range = self.parse_header_info()
 
-        with open(datafile) as fi:
-            self.data = self.read_data(fi)
+        with open(self.datafile) as fi:
+            data = self.read_data(fi)
 
         # convert data values to microV
-        self.data = self.in_microV(self.data, amp_range)
-        self.info['units'] = 'microV'
+        data = self.in_microV(data, info, amp_range)
+        info['units'] = 'microV'
+
+        return data, info
 
 
-    def in_microV(self, data, amp_range):
+    def in_microV(self, data, info, amp_range):
         """
         convert the data values in microV
         amp_range is a list, 
@@ -39,9 +42,7 @@ class BardReader():
         # 2 - extend range on either side
         # 1000 - convert to microV
         # 16 - bit depth
-        print self.info
-        print amp_range
-        for chan in range(self.info['channelcount']):
+        for chan in range(info['channelcount']):
             m = 2 * amp_range[chan] * 1000 / 2 ** 16
             data[:, chan] = data[:, chan] * m
         return data
@@ -101,14 +102,15 @@ def test():
     f =  '/data/Dropbox/work/jipmer_research/post_MI_risk/patient_data/first_case/nsr.txt'
     br = BardReader(f)
 
-    print br.info
+    data, info = br.read()
+    
+    print 'info'
+    print info
 
-    print br.data.shape
+    print data.shape
+    print data
 
-    print br.data
-
-    assert br.data.shape == (br.info['samp_count'],
-                              br.info['channelcount'])
+    assert data.shape == (info['samp_count'], info['channelcount'])
     
 if __name__ == '__main__':
     test()
