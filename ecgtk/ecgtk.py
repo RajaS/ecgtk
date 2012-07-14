@@ -125,6 +125,20 @@ def _write_ann(self, qrs_peaks, annfile):
                                     qrs, 'N', 0, 0, 0))
     fi.close()
 
+def get_stim_times(stim, samplingrate):
+    """
+    stim is a vector of stim recording.
+    return a vector of stim times
+    """
+    blank = 300 * int(samplingrate / 1000)  # min of 300 ms
+    threshold = 5000  # 5 mV
+
+    above_threshold = [pt for pt in range(len(stim)) if stim[pt] > threshold]
+    stims = [above_threshold[x] for x in range(len(above_threshold))
+             if above_threshold[x] - above_threshold[x-1] > blank]
+
+    return stims
+
 
 class QRSDetector():
     """
@@ -462,7 +476,6 @@ class QRSDetector():
         return unique_peaks
 
 
-    
 class ECG():
     def __init__(self, data, info = {'samplingrate': 1000}):
         """
@@ -474,13 +487,13 @@ class ECG():
         self.samplingrate = info['samplingrate']
         self.qrsonsets = None
 
-    def remove_baseline(self, anchorx, window):
+    def remove_baseline(self, anchorx, window, leads=range(12)):
         """
         Remove baseline wander by subtracting a cubic spline.
         anchorx is a vector of isoelectric points (usually qrs onset -20ms)
         window is width of window to use (in ms) for averaging the amplitude at anchors
         """
-        for chan in range(self.data.shape[1]):
+        for chan in leads:
             ecg = self.data[:,chan]                    
             windowwidth = _ms_to_samples(window, self.samplingrate) / 2
             #Do we have enough points before first anchor to use it
@@ -697,13 +710,22 @@ def test():
 
     print 'found qrspeaks', len(ecg.qrsonsets)
  
-    pylab.plot(data[:, 7])
-    pylab.hold(1)
-    ecg.remove_baseline(ecg.qrsonsets-240, 20)
+    stim = get_stim_times(ecg.data[:, 13], 2000)
 
-    pylab.plot(ecg.data[:,7], 'r')
-    for q in ecg.qrsonsets:
-        pylab.plot(q-240, 400, 'xr')
+    pylab.plot(data[:, 13])
+    pylab.hold(1)
+    # ecg.remove_baseline(ecg.qrsonsets-240, 20)
+
+    # pylab.plot(ecg.data[:,7], 'r')
+    # for q in ecg.qrsonsets:
+    #     pylab.plot(q-240, 400, 'xr')
+    # pylab.show()
+    # for r in ecg.qrsonsets:
+    #     pylab.plot(r, 400, 'xr')
+
+    for s in stim:
+        pylab.plot(s, 200, 'ok')
+
     pylab.show()
 
 if __name__ == '__main__':
