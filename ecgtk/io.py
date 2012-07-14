@@ -78,6 +78,8 @@ class BardReader():
                 info['starttime'] = line.lstrip('Start time:').rstrip('\r\n')
             elif line.startswith('End time'):
                 info['endtime'] = line.lstrip('End time:').rstrip('\r\n')
+            elif line.startswith('Sample Rate'):
+                info['samplingrate'] = int(line.split(':')[1].rstrip('Hz\r\n'))
 
             # extract channel labels
             elif line.startswith('Label'):
