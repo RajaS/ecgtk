@@ -168,7 +168,6 @@ class QRSDetector():
         if self.points < self.samplingrate * 8:
             raise ValueError("Length of ECG is less than 8 seconds")
         
-        
     def qrs_detect(self, qrslead=0):
          """Detect QRS onsets using modified PT algorithm
          """
@@ -356,7 +355,6 @@ class QRSDetector():
 
         return unique_peaks
 
-
     def checkPeaks(self, peaks, ecg):
         """Check the given peaks one by one according to
         thresholds that are constantly updated"""
@@ -405,7 +403,6 @@ class QRSDetector():
         if len(self.QRSpeaks) > 1:
             self.rr_buffer.pop(0)
             self.rr_buffer.append(self.QRSpeaks[-1] - self.QRSpeaks[-2])
-
 
     def acceptasNoise(self, peak, amplitude):
         self.noise_peak_buffer.pop(0)
@@ -476,6 +473,48 @@ class QRSDetector():
         return unique_peaks
 
 
+class Cursor:
+    """
+    Cursor that can be used for measurements or
+    marking points on a pylab plot
+    """
+    def __init__(self, ax, cursor='vertical'):
+        # cursor can be vertical, horizontal or cross
+        self.ax = ax
+        self.lx = None; self.ly = None
+        self.cursor = cursor
+
+        if cursor != 'vertical':
+            self.lx = ax.axhline(color='k')  # the horiz line
+        if cursor != 'horizontal':
+            self.ly = ax.axvline(color='k')  # the vert line
+
+        pylab.connect('motion_notify_event', self.mouse_move)
+        pylab.connect('button_press_event', self.mouse_click)
+
+    def mouse_move(self, event):
+        if not event.inaxes: return
+        x, y = event.xdata, event.ydata
+
+        # update the line positions
+        if self.lx:
+            self.lx.set_ydata(y )
+        if self.ly:
+            self.ly.set_xdata(x )
+
+        pylab.draw()
+
+    def mouse_click(self, event):
+        if not event.inaxes: return
+        x, y = event.xdata, event.ydata
+
+        if self.cursor == 'vertical':
+            self.ax.axvline(x=x, color='r')
+        elif self.cursor == 'horizontal':
+            self.ax.axhline(y=y, color='r')
+        #self.txt.set_text('clicked at %1.2f, %1.2f' %(x,y))
+
+
 class ECG():
     def __init__(self, data, info = {'samplingrate': 1000}):
         """
@@ -487,49 +526,73 @@ class ECG():
         self.samplingrate = info['samplingrate']
         self.qrsonsets = None
 
-    def remove_baseline(self, anchorx, window, leads=range(12)):
+    def remove_baseline(self, anchorx, window, lead=0):
         """
         Remove baseline wander by subtracting a cubic spline.
         anchorx is a vector of isoelectric points (usually qrs onset -20ms)
         window is width of window to use (in ms) for averaging the amplitude at anchors
         """
-        for chan in leads:
-            ecg = self.data[:,chan]                    
-            windowwidth = _ms_to_samples(window, self.samplingrate) / 2
-            #Do we have enough points before first anchor to use it
-            if anchorx[0] < windowwidth:
-                anchorx = anchorx[1:]
-            # subtract dc
-            ecg -= scipy.mean(ecg[anchorx[:]]) 
-            # amplitudes for anchors
-            # window is zero, no averaging
-            if windowwidth == 0:
-                anchory = scipy.array([ecg[x] for x in anchorx])
-            # or average around the anchor
-            else:
-                anchory = scipy.array([scipy.mean(ecg[x-windowwidth:x+windowwidth])
-                          for x in anchorx])
-            # x values for spline that we are going to calculate
-            splinex = scipy.array(range(len(ecg)))
-            # calculate cubic spline fit
-            tck = scipy.interpolate.splrep(anchorx, anchory)
-            spliney = scipy.interpolate.splev(splinex, tck)
-            # subtract the spline
-            ecg -= spliney
-            self.data[:, chan] = ecg
+        ecg = self.data[:, lead]                    
+        windowwidth = _ms_to_samples(window, self.samplingrate) / 2
+        #Do we have enough points before first anchor to use it
+        if anchorx[0] < windowwidth:
+            anchorx = anchorx[1:]
+        # subtract dc
+        ecg -= scipy.mean(ecg[anchorx[:]]) 
+        # amplitudes for anchors
+        # window is zero, no averaging
+        if windowwidth == 0:
+            anchory = scipy.array([ecg[x] for x in anchorx])
+        # or average around the anchor
+        else:
+            anchory = scipy.array([scipy.mean(ecg[x-windowwidth:x+windowwidth])
+                      for x in anchorx])
+        # x values for spline that we are going to calculate
+        splinex = scipy.array(range(len(ecg)))
+        # calculate cubic spline fit
+        tck = scipy.interpolate.splrep(anchorx, anchory)
+        spliney = scipy.interpolate.splev(splinex, tck)
+        # subtract the spline
+        ecg -= spliney
 
-            # if chan == 7:
-            #     pylab.plot(ecg)
-            #     pylab.plot(anchorx, anchory, 'or')
-            #     pylab.show()
+        return ecg
 
-    def get_qrsonsets(self, qrslead):
+
+    def get_qrspeaks(self, qrslead):
         """
         Using pan tomkins method detect qrs onsets
         currently only qrs peak is detected
         """
         det = QRSDetector(self.data[:, qrslead], self.samplingrate)
-        self.qrsonsets = det.qrs_detect()
+        qrsonsets = det.qrs_detect()
+        return qrsonsets
+
+    def get_wavelimits(self, qrspeaks, leads=range(12)):
+        """
+        Given qrspeaks / point on qrs,
+        interactively, obtain qrs onset, end and tend
+        leads is a list of the indices of ECG leads
+        """
+        ax = pylab.subplot(111)
+        meanrr = int(scipy.mean(qrspeaks[1:] - qrspeaks[:-1]))
+        onems = int(self.samplingrate / 1000)
+        r = qrspeaks[int(len(qrspeaks) * 2/3)]  # choose a beat 2/3 of way
+        
+        start = r - 200 * onems  # 400 ms before
+        end = start + meanrr
+
+        for l in leads:
+            ax.plot(self.data[start:end, l])
+
+        cursor = Cursor(ax)
+
+        pts = pylab.ginput(3)
+        q, s, t = [pt[0] for pt in pts]
+        #pylab.show()
+        qrsonsets = qrspeaks + (q - 200 * onems)
+        qrsends = qrspeaks + (s - 200 * onems)
+        tends = qrspeaks + (t - 200 * onems)
+        return qrsonsets, qrsends, tends
 
 
     def write_ann(self, annfile):
@@ -677,7 +740,6 @@ class ECG():
                 pass
 
 
-
 def test_remove_baseline():
     """test for remove_baseline function
     """
@@ -706,14 +768,12 @@ def test():
     print info
 
     ecg = ECG(data, info)
-    ecg.get_qrsonsets(7)
+    qrspeaks = ecg.get_qrspeaks(7)
 
-    print 'found qrspeaks', len(ecg.qrsonsets)
+    print 'found qrspeaks', len(qrspeaks)
  
     stim = get_stim_times(ecg.data[:, 13], 2000)
 
-    pylab.plot(data[:, 13])
-    pylab.hold(1)
     # ecg.remove_baseline(ecg.qrsonsets-240, 20)
 
     # pylab.plot(ecg.data[:,7], 'r')
@@ -722,11 +782,17 @@ def test():
     # pylab.show()
     # for r in ecg.qrsonsets:
     #     pylab.plot(r, 400, 'xr')
+    qrsonsets, qrsends, tends = ecg.get_wavelimits(qrspeaks)
 
-    for s in stim:
-        pylab.plot(s, 200, 'ok')
-
+    pylab.plot(ecg.data[:,7])
+    for r in qrsonsets:
+        pylab.plot(r, 10, 'xr')
+    for s in qrsends:
+        pylab.plot(s, 10, 'ok')
+    for t in tends:
+        pylab.plot(t, 10, 'or')
     pylab.show()
+
 
 if __name__ == '__main__':
     test()
