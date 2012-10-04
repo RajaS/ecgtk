@@ -21,7 +21,7 @@ class BardReader():
             self.header = self.get_header(fi)
 
         # extract some header information
-        info, amp_range = self.parse_header_info()
+        info, amp_range = self.parse_header_info(self.header)
 
         with open(self.datafile) as fi:
             data = self.read_data(fi)
@@ -32,6 +32,26 @@ class BardReader():
 
         return data, info
 
+
+    def data(self, nrows=0):
+        """
+        Generator returning the data as rows
+        Returns upto nrows rows or all data
+        """
+        with open(self.datafile) as fi:
+            self.header = self.get_header(fi)
+        info, amp_range = self.parse_header_info(self.header)
+
+        with open(self.datafile) as fi:
+            # dump header
+            for i in range(len(self.header)):
+                h = fi.readline()
+                
+            if nrows == 0:
+                nrows = info['samp_count']
+            for i in xrange(nrows):
+                yield fi.readline()
+            
 
     def in_microV(self, data, info, amp_range):
         """
@@ -61,7 +81,7 @@ class BardReader():
                 return header
 
 
-    def parse_header_info(self):
+    def parse_header_info(self, header):
         """Extract required information from the header"""
         info = {}
         info['channellabels'] = []
@@ -69,7 +89,7 @@ class BardReader():
         # channel specific info
         amp_range = []  # ampl range
 
-        for line in self.header:
+        for line in header:
             if line.startswith('Channels exported'):
                 info['channelcount'] = int(line.split(':')[1].rstrip('\r\n'))
             elif line.startswith('Samples per channel'):
