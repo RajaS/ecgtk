@@ -2,10 +2,19 @@ from __future__ import division
 import scipy
 import scipy.signal
 import pylab
-import datetime
+from datetime import datetime
+import glob
+import os
+import matplotlib
+
+import sys
+sys.path.append("/data/Dropbox/programming/ECGtk")
+import io
+#import ecgtk, io
+
 # Running the tests
 # run from a terminal "nosetests -v --with-doctest ecgtk.py"
-
+# from io import BardReader
 
 def _norm_dot_product(a,b):
     """Will return normalized dot product for two vectors"""
@@ -138,6 +147,186 @@ def get_stim_times(stim, samplingrate):
              if above_threshold[x] - above_threshold[x-1] > blank]
 
     return stims
+
+def stitch_data(parts_data, parts_info):
+    """
+    stitch data that comes in multiple parts
+    The time in the info is only accurate and overlap is variable
+    """
+    samplingrate = parts_info[0]['samplingrate']
+
+    # is there overlap
+    start_ends = [(info['starttime'], info['endtime']) for
+                   info in parts_info]
+    start_ends = [(datetime.strptime(start, '%H:%M:%S'),
+                   datetime.strptime(end, '%H:%M:%S')) for
+                  (start, end) in start_ends]
+    for i in range(1, len(start_ends)):
+        if not start_ends[i][0] <= start_ends[i-1][1] <= start_ends[i][1]:
+            print 'no overlap for recording number %s' %(i+1)
+            print start_ends[i-1], start_ends[i]
+            #print start_ends
+            return None            
+
+    # find overlap
+    overlap_rows = []
+    for i in range(1, len(start_ends)):
+        overlap = (start_ends[i-1][1] - start_ends[i][0]).seconds
+        #print 'overlap', overlap
+
+        lastrow = parts_data[i-1][-1, :]
+        #print lastrow[:5]
+        for row in range(len(parts_data[i])):
+            if (parts_data[i][row, :] == lastrow).all() == True:
+                #print 'actual overlap', row
+                overlap_rows.append(row)
+
+
+    # stitch data
+    datasets = [parts_data[0]]
+    for r in range(len(overlap_rows)):
+        datasets.append(parts_data[r+1][overlap_rows[r]+1:, :])
+    combined_data = scipy.concatenate(datasets)
+
+    # combination info
+    combined_info = parts_info[0]
+    combined_info['samp_count'] = len(combined_data)
+    combined_info['endtime'] = parts_info[-1]['endtime']
+
+    return combined_data, combined_info
+
+
+def makeMat(ecg,qrsonsets,qrsflags):
+    """split ecg to make 2d matrix of the form beats x points.
+    bad qrst complexes are replaced by average"""
+    
+    #convert to millivolts
+    #ecg = ecg*1000        # do this later in the calling script if reqd
+    
+    #Get mean cycle length
+    rrintervals = qrsonsets[1:]-qrsonsets[:-1]
+    meanrr = int(scipy.mean(rrintervals))
+        
+    # do we have one rr after last qrsonset?
+    # am not changing qrsflags, but last qrsflag will become unpaired
+    if qrsonsets[-1] + meanrr > len(ecg):
+        qrsonsets = qrsonsets[:-1]
+    
+    #segment into a 2d matrix
+    Nbeats = len(qrsonsets)
+    ecgmat = scipy.zeros((Nbeats,meanrr))
+    
+    #for l in range(leads):
+    for i in range(Nbeats):
+        if qrsflags[i] == 1:
+            ecgmat[i,:] = ecg[qrsonsets[i]:qrsonsets[i]+meanrr]
+    
+    #get mean qrst and insert where qrsflag is 0
+    
+    #for l in range(leads):
+    meanqrst = scipy.zeros(meanrr)
+    sumqrst = scipy.zeros(meanrr)
+    
+    for i in range(meanrr):
+        sumqrst[i] += scipy.sum(ecgmat[:,i])
+    meanqrst = sumqrst/scipy.sum(qrsflags)
+      
+    # if there is atleast one good qrs, replace bad by avg good
+    if sum(qrsflags) > 0:
+        for i in range(Nbeats):
+            if qrsflags[i] == 0:
+                #print meanqrst.shape
+                ecgmat[i,:] = meanqrst[:]
+            
+    return (ecgmat,meanqrst)
+
+
+def altMeasure(ecgmat,windowbegin,windowlength,qrswidth,qtinterval,meanrr):
+    """Measure alternans for the ecglead defined in the defined window 
+    given the matrix of qrst points created by makemat. Calculate for 
+    whole cycle, return values for each point and also overall value
+    in the qt interval alone"""
+    
+    #calculate power spectrum for each column
+    #make sure we use an even number so that the spect contains odd no. of points
+    if windowlength % 2 == 0:
+        Nfft = windowlength
+    else:
+        Nfft = windowlength+1
+
+    beats, meanrr = ecgmat.shape  #mean rr is the second dim of ecgmat
+
+    powerspect = scipy.zeros((Nfft/2 + 1, meanrr))
+    kvector = scipy.zeros(meanrr)
+    valtvector = scipy.zeros(meanrr)
+    
+    for i in range(meanrr):
+        
+        timeseries = ecgmat[windowbegin:windowbegin+windowlength,i]
+        timeseries -= scipy.mean(timeseries)  #remove dc
+
+        #get the first half of the spectrum    
+        spect = scipy.fft(timeseries,Nfft)[:Nfft/2 + 1]
+        
+        #get absolute magnitude and scale it by nbeats
+        spect = abs(spect)/Nfft
+        
+        #powerspect is sq of this
+        powerspect[:,i] = spect**2
+        
+        #except dc and nyquist, other points have to be multiplied by 2
+        powerspect[1:-1,i] *= 2
+        
+        #calculate valt and k for point
+        altpower = powerspect[-1,i]
+        noise = powerspect[-11:-1,i]
+        meannoise = scipy.mean(noise)
+        stdnoise = scipy.std(noise)
+        
+        if altpower < meannoise:
+            valtvector[i] = 0
+        else:
+            valtvector[i] = scipy.sqrt(altpower - meannoise)
+
+        kvector[i] = (altpower - meannoise)    / stdnoise
+        
+    #calculate aggregate power spectrum for st interval only
+    avgpowerspect = scipy.zeros(Nfft/2+1)
+    
+    for i in range(int(Nfft/2)+1):
+        avgpowerspect[i] = scipy.mean(powerspect[i,qrswidth:qtinterval])
+        
+    altpower = avgpowerspect[-1]
+    noise = avgpowerspect[-11:-1]
+    meannoise = scipy.mean(noise)
+    stdnoise = scipy.std(noise)        
+    
+    valt = scipy.sqrt(altpower - meannoise).real  # only the real part
+    k = (altpower - meannoise)    / stdnoise
+        
+    return (k, valt, meannoise, kvector, valtvector, avgpowerspect)
+
+
+def analyseTWA(k,valt):
+    """Provide automated analysis of TWA results. Input is the matrix
+    of k values and the matrix of Valt"""
+    
+    segs,leads = k.shape
+    posleads = []
+    maxvalt = 0
+    maxlead = -1
+    
+    for l in range(leads):
+        for s in range(segs):
+            if k[s,l] >= 3:
+                if valt[s,l] >= 1.9:
+                    if l not in posleads:
+                        posleads.append(l)
+                    if valt[s,l] > maxvalt:
+                        maxvalt = valt[s,l]
+                        maxlead = l
+    
+    return (posleads,maxvalt,maxlead) 
 
 
 class QRSDetector():
@@ -555,7 +744,101 @@ class ECG():
         # subtract the spline
         ecg -= spliney
 
+        self.data[:, lead] = ecg
+
         return ecg
+
+
+    def realign(self, qrsonset, qrswidth, windowsize, samplerate, lead):
+        """
+        Give ecg and calculated qrsonset
+        Realigns by two iterations of maximal normalised dot product
+        windowSize - is the initial search window size around the marked QRS to 
+        allow for matching - is given in ms
+        Raja S
+        """
+        ecg = self.data[:, lead]      
+        #convert windowsize to samples
+        windowsize = int(windowsize*samplerate/1000)
+        #Check if first and last beats can be used
+        firstbeat = 0
+        if qrsonset[0] < windowsize:
+            qrsonset = qrsonset[1:] #.pop[0]
+
+        #remove last beat if it is with out a QRSend
+        nbeats = len(qrsonset)
+        if qrsonset[-1] + windowsize + qrswidth > len(ecg):
+            lastbeat = nbeats - 1
+        else:
+            lastbeat = nbeats
+
+        #Create first template
+        nQRSonset = scipy.zeros(lastbeat,int)  #New QRS onsets
+        goodQRSflag = scipy.zeros(lastbeat,int)
+
+        template1 = scipy.zeros(qrswidth)
+        for t in range(qrswidth):
+            template1[t] = scipy.mean(ecg[qrsonset[:lastbeat]+t])
+            
+        #align and exclude morphologically different beats
+        dotproduct = scipy.zeros(2*windowsize + 1)
+        
+        for t in range(lastbeat):
+            for point in range(-windowsize,windowsize):
+                begin = qrsonset[t]+point
+                dotproduct[point+windowsize] = _norm_dot_product(template1,
+                                                ecg[begin:begin+qrswidth])
+            onset = scipy.argmax(dotproduct)
+            xx = dotproduct[onset]
+            nQRSonset[t] = qrsonset[t] - windowsize - 1 + onset
+            if xx > 0.6:
+                goodQRSflag[t] = 1
+
+        #Create second template using only 'good' beats
+        newQRSonset = scipy.zeros(len(nQRSonset),int)
+        template2sum = scipy.zeros(qrswidth)
+        template2 = scipy.zeros(qrswidth)
+
+        for beat in range(lastbeat):
+            template2sum[:qrswidth] = template2sum[:qrswidth]+ \
+                            (goodQRSflag[beat]*\
+                            ecg[nQRSonset[beat]:nQRSonset[beat]+qrswidth])
+
+        template2 = template2sum / sum(goodQRSflag)
+        #Align to second template
+        #alignWindowwidth = round(6*SampleRate/1000);
+        windowsize = int(windowsize/2) 
+        dotproduct2 = scipy.zeros(2*windowsize + 1)
+        
+        for t in range(len(nQRSonset)):
+            for point in range(-windowsize,windowsize):
+                begin = nQRSonset[t]+point
+                dotproduct2[point+windowsize+1] = _norm_dot_product(template2,
+                                            ecg[begin:begin+qrswidth])
+
+            onset = scipy.argmax(dotproduct2)
+            xx = dotproduct2[onset]
+            newQRSonset[t] = nQRSonset[t] - windowsize - 1 + onset
+
+            if xx > 0.96:
+                goodQRSflag[t] = 1
+            else:
+                goodQRSflag[t] = 0
+
+        if firstbeat == 2:
+            newQRSonset = newQRSonset[2:]
+            goodQRSflag = goodQRSflag[2:]
+            
+        # further modify qrsflag based on CL
+        rrinterval = newQRSonset[1:] - newQRSonset[:-1]
+        meanrr = int(scipy.mean(rrinterval))
+        
+        #modify qrsflags by cycle length criterion
+        for i in range(len(rrinterval)):
+            if rrinterval[i] < 0.85*meanrr:
+                goodQRSflag[i+1] = 0
+
+        return newQRSonset, goodQRSflag
 
 
     def get_qrspeaks(self, qrslead):
@@ -574,6 +857,8 @@ class ECG():
         leads is a list of the indices of ECG leads
         """
         ax = pylab.subplot(111)
+        ax.set_title("Pick QRS onset, end and T end")
+        #ax = matplotlib.pyplot.axes()
         meanrr = int(scipy.mean(qrspeaks[1:] - qrspeaks[:-1]))
         onems = int(self.samplingrate / 1000)
         r = qrspeaks[int(len(qrspeaks) * 2/3)]  # choose a beat 2/3 of way
@@ -589,9 +874,9 @@ class ECG():
         pts = pylab.ginput(3)
         q, s, t = [pt[0] for pt in pts]
         #pylab.show()
-        qrsonsets = qrspeaks + (q - 200 * onems)
-        qrsends = qrspeaks + (s - 200 * onems)
-        tends = qrspeaks + (t - 200 * onems)
+        qrsonsets = qrspeaks + int(q - 200 * onems)
+        qrsends = qrspeaks + int(s - 200 * onems)
+        tends = qrspeaks + int(t - 200 * onems)
         return qrsonsets, qrsends, tends
 
 
@@ -632,7 +917,7 @@ class ECG():
         
         onemm = 40 * int(self.samplingrate / 1000)
         onesec = self.samplingrate
-        onemv = 400 / 1000 # correct for microV
+        onemv = (400 * self.samplingrate) / (1000 * 1000) # correct for microV
         lenecg = 10*onesec
         htecg = 136*onemm
 
@@ -641,7 +926,7 @@ class ECG():
         thinbgwidth = 0.1
         ecgwidth = 0.8
 
-        pylab.figure()
+        ecgfig = pylab.figure()
         #thick horizontal lines
         for horiz in range(0,htecg,5*onemm):
             pylab.plot([0,lenecg],[horiz,horiz],'r',linewidth=thickbgwidth)
@@ -732,13 +1017,17 @@ class ECG():
             pylab.show()
         else:
             pylab.savefig(savefilename, dpi=300)
-            
+
             #if possible, crop with imagemagick
             try:
                 commands.getoutput("mogrify -trim '%s'" %(savefilename))
             except:
                 pass
 
+        # clear the figure
+        # Otherwise subsequent plots overlap
+        ecgfig.clf()
+                
 
 def test_remove_baseline():
     """test for remove_baseline function
@@ -794,5 +1083,26 @@ def test():
     pylab.show()
 
 
+def stitch_test():
+    from io import BardReader
+    filename = "/data/tmp/twa/avpace90_1.txt"
+    # find all files in the set
+    dirname, basefilename = os.path.split(filename)
+    parts = glob.glob(filename[:-5] + '*')
+    parts.sort()
+    print parts
+
+    # get times
+    parts_data = []
+    parts_info= []    
+    for p in parts:
+        br = io.BardReader(p)
+        data, info = br.read()
+        parts_data.append(data)
+        parts_info.append(info)
+
+    stitch_data(parts_data, parts_info)
+
+
 if __name__ == '__main__':
-    test()
+    stitch_test()
