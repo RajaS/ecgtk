@@ -33,7 +33,7 @@ class BardReader():
         return data, info
 
 
-    def data(self, nrows=0):
+    def rows(self, nrows=0):
         """
         Generator returning the data as rows
         Returns upto nrows rows or all data
