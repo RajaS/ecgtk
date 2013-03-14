@@ -712,7 +712,12 @@ class ECG():
         units should be in mv
         """
         self.data = data
-        self.samplingrate = info['samplingrate']
+
+        try:
+            self.samplingrate = info['samplingrate']
+        except KeyError:
+            self.samplingrate = info['samp_freq'] # used by wfdb tools. #TODO: uniform terminology
+            
         self.qrsonsets = None
 
     def remove_baseline(self, anchorx, window, lead=0):
@@ -1046,40 +1051,25 @@ def test_remove_baseline():
 
 
 def test():
-    from io import BardReader
-    f = '/data/Dropbox/work/jipmer_research/post_MI_risk/patient_data/first_case/avpace90_3.txt'
-    #f = '/data/Dropbox/work/jipmer_research/post_MI_risk/patient_data/first_case/nsr.txt'    
-    br = BardReader(f)
-    data, info = br.read()
-
+    from wfdbtools import rdsamp
+    record = '../samples/format212/100'
+    
+    data, info = rdsamp(record, 0, 30)
+    
     print 'loaded data', data.shape
-
-    print info
+    print 'Info', info
 
     ecg = ECG(data, info)
-    qrspeaks = ecg.get_qrspeaks(7)
+    qrslead = 2 # data is an array with cols 0 and 1 representing times and 2 and 3 being two signals
+
+    
+    qrspeaks = ecg.get_qrspeaks(qrslead)
 
     print 'found qrspeaks', len(qrspeaks)
  
-    stim = get_stim_times(ecg.data[:, 13], 2000)
-
-    # ecg.remove_baseline(ecg.qrsonsets-240, 20)
-
-    # pylab.plot(ecg.data[:,7], 'r')
-    # for q in ecg.qrsonsets:
-    #     pylab.plot(q-240, 400, 'xr')
-    # pylab.show()
-    # for r in ecg.qrsonsets:
-    #     pylab.plot(r, 400, 'xr')
-    qrsonsets, qrsends, tends = ecg.get_wavelimits(qrspeaks)
-
-    pylab.plot(ecg.data[:,7])
-    for r in qrsonsets:
-        pylab.plot(r, 10, 'xr')
-    for s in qrsends:
-        pylab.plot(s, 10, 'ok')
-    for t in tends:
-        pylab.plot(t, 10, 'or')
+    pylab.plot(ecg.data[:,qrslead])
+    for r in qrspeaks:
+        pylab.plot(r, data[r, qrslead], 'xr')
     pylab.show()
 
 
@@ -1105,4 +1095,4 @@ def stitch_test():
 
 
 if __name__ == '__main__':
-    stitch_test()
+    test()
