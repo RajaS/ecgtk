@@ -304,27 +304,24 @@ def plot_data(data, info, ann=None):
     except ImportError:
         warnings.warn("Could not import pylab. Abandoning plotting")
         return
-        
+    
+    nsignals = info['signal_count']
     time = data[:, 1] #in seconds. use data[:, 0] to use sample no.
-    sig1 = data[:, 2]
-    sig2 = data[:, 3]
     
-    pylab.subplot(211)
-    pylab.plot(time, sig1, 'k')
-    pylab.xticks([])
-    pylab.ylabel('%s (mV)' %(info['signal_names'][0]))
+    print 'have %d signals...' % (nsignals)
+    for sig in range(nsignals):
+        sigdata = data[:, sig+2]
+        
+        pylab.subplot(nsignals, 1, sig+1)
+        pylab.plot(time, sigdata, 'k')
+        #pylab.xticks([])
+        pylab.ylabel('%s (mV)' %(info['signal_names'][sig]))
+        pylab.xlabel('Time (seconds)')
     
-    pylab.subplot(212)
-    pylab.plot(time, sig2, 'k')
-    pylab.ylabel('%s (mV)' %(info['signal_names'][1])) 
-    pylab.xlabel('Time (seconds)')
-
-    if ann != None:
-        # annotation time in samples from start
-        ann_x = (ann[:, 0] - data[0, 0]).astype('int')
-        pylab.plot(ann[:, 1], data[ann_x, 3], 'xr')
-        pylab.subplot(211)
-        pylab.plot(ann[:, 1], data[ann_x, 2], 'xr')
+        if ann != None:
+            # annotation time in samples from start
+            ann_x = (ann[:, 0] - data[0, 0]).astype('int')
+            pylab.plot(ann[:, 1], data[ann_x, sig+1], 'xr')
 
     pylab.show()
 
@@ -361,7 +358,8 @@ def rdhdr(record):
             'first_values':[], 'zero_values':[], 'file_format':[]}
     
     RECORD_REGEX = re.compile(r''.join([
-            "(?P<record>\d+)\/*(?P<seg_ct>\d*)\s", 
+            #"(?P<record>\d+)\/*(?P<seg_ct>\d*)\s",
+            "(?P<record>[0-9a-zA-Z\._/-]+)\/*(?P<seg_ct>\d*)\s", #record name can be any alphanumeric, surely?
             "(?P<sig_ct>\d+)\s*",
             "(?P<samp_freq>\d*)\/?(?P<counter_freq>\d*)\(?(?P<base_counter>\d*)\)?\s*",
             "(?P<samp_count>\d*)\s*",
