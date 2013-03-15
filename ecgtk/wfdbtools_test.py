@@ -3,7 +3,7 @@
 import os
 from wfdbtools import rdsamp, rdann, rdhdr
 
-testdir = os.path.abspath('samples/format212/')
+testdir = os.path.abspath('../samples/format212/')
 testrecord = os.path.join(testdir, '100')
 
 def rdsamp_test():
@@ -52,7 +52,7 @@ def rdhdr_test():
     assert info['samp_count'] == 525000
 
     # multichannel_header
-    record = os.path.abspath('samples/format16/twa01')
+    record = os.path.abspath('../samples/format16/twa01')
     info = rdhdr(record)
     assert info['signal_count'] == 12
     assert info['signal_names'] ==  ['I', 'II', 'III', 'aVR', 'aVL', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
