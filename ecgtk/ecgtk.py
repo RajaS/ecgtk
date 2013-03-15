@@ -5,11 +5,11 @@ import pylab
 from datetime import datetime
 import glob
 import os
-import matplotlib
+#import matplotlib
 
 import sys
 sys.path.append("/data/Dropbox/programming/ECGtk")
-import io
+import io_utils
 #import ecgtk, io
 
 # Running the tests
@@ -1074,7 +1074,7 @@ def test():
 
 
 def stitch_test():
-    from io import BardReader
+    from io_utils import BardReader
     filename = "/data/tmp/twa/avpace90_1.txt"
     # find all files in the set
     dirname, basefilename = os.path.split(filename)
@@ -1086,7 +1086,7 @@ def stitch_test():
     parts_data = []
     parts_info= []    
     for p in parts:
-        br = io.BardReader(p)
+        br = io_utils.BardReader(p)
         data, info = br.read()
         parts_data.append(data)
         parts_info.append(info)
