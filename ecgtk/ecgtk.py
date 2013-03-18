@@ -712,12 +712,7 @@ class ECG():
         units should be in mv
         """
         self.data = data
-
-        try:
-            self.samplingrate = info['samplingrate']
-        except KeyError:
-            self.samplingrate = info['samp_freq'] # used by wfdb tools. #TODO: uniform terminology
-            
+        self.samplingrate = info['samp_freq'] 
         self.qrsonsets = None
 
     def remove_baseline(self, anchorx, window, lead=0):
