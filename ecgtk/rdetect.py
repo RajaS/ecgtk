@@ -23,6 +23,10 @@
 import yaml
 import scipy
 import wx
+import matplotlib
+from matplotlib.backends.backend_wx import FigureCanvasWx as FigureCanvas
+from matplotlib.backends.backend_wx import NavigationToolbar2Wx
+from matplotlib.figure import Figure
 
 from io import BardReader
 ##################
@@ -55,11 +59,56 @@ class Model:
         return data, info
 
 
+
 class View(wx.Frame):
     def __init__(self, parent):
         wx.Frame.__init__(self, parent, title='QRS detect')
+        self.SetBackgroundColour(wx.NamedColour("WHITE"))
+        self.figure = Figure()
+        self.axes = self.figure.add_subplot(111)
+
+        #self.axes.plot(t, s)
+        self.canvas = FigureCanvas(self, -1, self.figure)
+
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.sizer.Add(self.canvas, 1, wx.LEFT | wx.TOP | wx.GROW)
+        self.SetSizer(self.sizer)
+        self.Fit()
+
+        self.add_toolbar()  
+
+        
+    def add_toolbar(self):
+        self.toolbar = NavigationToolbar2Wx(self.canvas)
+        self.toolbar.Realize()
+        if wx.Platform == '__WXMAC__':
+            self.SetToolBar(self.toolbar)
+        else:
+            # On Windows platform, default window size is incorrect, so set
+            # toolbar width to figure width.
+            tw, th = self.toolbar.GetSizeTuple()
+            fw, fh = self.canvas.GetSizeTuple()
+            # By adding toolbar in sizer, we are able to put it at the bottom
+            # of the frame - so appearance is closer to GTK version.
+            # As noted above, doesn't work for Mac.
+            self.toolbar.SetSize(wx.Size(fw, th))
+            self.sizer.Add(self.toolbar, 0, wx.LEFT | wx.EXPAND)
+        # update the axes menu on the toolbar
+        self.toolbar.update()
 
 
+    def plot(ecg1, ecg2, marks=None):
+        """
+        Plot will show two ECG leads, each with the marks, if available
+        Last row will be rr intervals
+        """
+        if marks == None:
+            self.axes.plot(ecg1)
+
+        
+    def OnPaint(self, event):
+        self.canvas.draw()
+        
 class Controller:
     def __init__(self, app):
         self.model = Model()
@@ -67,6 +116,7 @@ class Controller:
 
         self.view.Show()
 
+        
 class CustReader:
     """
     Reader for the custom ecg format
@@ -87,3 +137,6 @@ if __name__ == '__main__':
     app = wx.App(False)
     controller = Controller(app)
     app.MainLoop()
+
+
+
