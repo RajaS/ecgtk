@@ -2,7 +2,7 @@ from __future__ import division
 import scipy
 import scipy.signal
 import pylab
-from datetime import datetime
+import datetime
 import glob
 import os
 import matplotlib
@@ -158,8 +158,8 @@ def stitch_data(parts_data, parts_info):
     # is there overlap
     start_ends = [(info['starttime'], info['endtime']) for
                    info in parts_info]
-    start_ends = [(datetime.strptime(start, '%H:%M:%S'),
-                   datetime.strptime(end, '%H:%M:%S')) for
+    start_ends = [(datetime.datetime.strptime(start, '%H:%M:%S'),
+                   datetime.datetime.strptime(end, '%H:%M:%S')) for
                   (start, end) in start_ends]
     for i in range(1, len(start_ends)):
         if not start_ends[i][0] <= start_ends[i-1][1] <= start_ends[i][1]:
@@ -441,6 +441,7 @@ class QRSDetector():
         time_ms = int(sample*1000 / self.samplingrate)
         hr, min, sec, ms = time_ms//3600000 % 24, time_ms//60000 % 60, \
                            time_ms//1000 % 60, time_ms % 1000
+
         timeobj = datetime.time(hr, min, sec, ms*1000) # last val is microsecs
         return timeobj.isoformat()[:-3] # back to ms
          
@@ -880,13 +881,13 @@ class ECG():
         return qrsonsets, qrsends, tends
 
 
-    def write_ann(self, annfile):
-        """Write an annotation file for the QRS onsets in a format
-        that is usable with wrann"""
-        fi = open(annfile, 'w')
-        for qrspeak in self.QRSpeaks:
-            fi.write('%s '*4 + '%s\n' %(self._sample_to_time(qrspeak), qrspeak, 'N', 0, 0, 0))
-        fi.close()
+    # def write_ann(self, qrspeaks, annfile):
+    #     """Write an annotation file for the QRS onsets in a format
+    #     that is usable with wrann"""
+    #     fi = open(annfile, 'w')
+    #     for qrspeak in qrspeaks:
+    #         fi.write('%s '*4 + '%s\n' %(self._sample_to_time(qrspeak), qrspeak, 'N', 0, 0, 0))
+    #     fi.close()
 
 
     def drawECG(self, start=0, leads=range(12), savefilename=None):
@@ -1056,7 +1057,6 @@ def test():
 
     ecg = ECG(data, info)
     qrslead = 2 # data is an array with cols 0 and 1 representing times and 2 and 3 being two signals
-
     
     qrspeaks = ecg.get_qrspeaks(qrslead)
 
@@ -1067,6 +1067,23 @@ def test():
         pylab.plot(r, data[r, qrslead], 'xr')
     pylab.show()
 
+
+def check_qrs_detection():
+    from wfdbtools import rdsamp
+    import subprocess
+    test_record = '../samples/format212/100'
+    qrslead = 2
+    
+    data, info = rdsamp(test_record)
+
+    qrsdetector = QRSDetector(data, info['samp_freq'])
+    
+    qrspeaks = qrsdetector.qrs_detect(qrslead)
+
+    qrsdetector.write_ann(os.path.abspath(test_record) + '.test')
+    
+    print subprocess.check_output(['bxb','-r', os.path.abspath(test_record), '-a', 'atr', 'test'])
+    
 
 def stitch_test():
     from io import BardReader
@@ -1090,4 +1107,5 @@ def stitch_test():
 
 
 if __name__ == '__main__':
+    #check_qrs_detection()
     test()
