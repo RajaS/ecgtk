@@ -22,7 +22,7 @@ class BardReader():
 
         # extract some header information
         info, amp_range = self.parse_header_info(self.header)
-
+        
         with open(self.datafile) as fi:
             data = self.read_data(fi)
 
@@ -62,7 +62,7 @@ class BardReader():
         # 2 - extend range on either side
         # 1000 - convert to microV
         # 16 - bit depth
-        for chan in range(info['channelcount']):
+        for chan in range(info['signal_count']):
             m = 2 * amp_range[chan] * 1000 / 2 ** 16
             data[:, chan] = data[:, chan] * m
         return data
@@ -82,28 +82,36 @@ class BardReader():
 
 
     def parse_header_info(self, header):
-        """Extract required information from the header"""
+        """Extract required information from the header
+           units - unit of amplitude
+           start_time - time of recording start
+           end_time - time of recording end
+          'signal_count' - Number of signals
+          'signal_names' - Names of each signal
+          'samp_freq' - Sampling freq (samples / second)
+          'samp_count' - Total samples in record
+        """
         info = {}
-        info['channellabels'] = []
+        info['signal_names'] = []
 
         # channel specific info
         amp_range = []  # ampl range
 
         for line in header:
             if line.startswith('Channels exported'):
-                info['channelcount'] = int(line.split(':')[1].rstrip('\r\n'))
+                info['signal_count'] = int(line.split(':')[1].rstrip('\r\n'))
             elif line.startswith('Samples per channel'):
                 info['samp_count'] = int(line.split(':')[1].rstrip('\r\n'))
             elif line.startswith('Start time'):
-                info['starttime'] = line.lstrip('Start time:').rstrip('\r\n')
+                info['start_time'] = line.lstrip('Start time:').rstrip('\r\n')
             elif line.startswith('End time'):
-                info['endtime'] = line.lstrip('End time:').rstrip('\r\n')
+                info['end_time'] = line.lstrip('End time:').rstrip('\r\n')
             elif line.startswith('Sample Rate'):
-                info['samplingrate'] = int(line.split(':')[1].rstrip('Hz\r\n'))
+                info['samp_freq'] = int(line.split(':')[1].rstrip('Hz\r\n'))
 
             # extract channel labels
             elif line.startswith('Label'):
-                info['channellabels'].append(line.split(':')[1].strip())
+                info['signal_names'].append(line.split(':')[1].strip())
             elif line.startswith('Range'): 
                 amp_range.append(float(line.split(':')[1].rstrip('mv \r\n')))
 
@@ -117,11 +125,13 @@ class BardReader():
         """Extract data into numpy array"""
         data = numpy.loadtxt(fi, dtype='float', delimiter=',',
                              skiprows=len(self.header))
+        
+        
         return data
 
     
 def test():
-    f =  '/data/Dropbox/work/jipmer_research/post_MI_risk/patient_data/first_case/nsr.txt'
+    f =  '../samples/bard/nsr.txt'
     br = BardReader(f)
 
     data, info = br.read()
@@ -132,7 +142,7 @@ def test():
     print data.shape
     print data
 
-    assert data.shape == (info['samp_count'], info['channelcount'])
+    assert data.shape == (info['samp_count'], info['signal_count'])
     
 if __name__ == '__main__':
     test()
