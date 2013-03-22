@@ -1,3 +1,8 @@
 sphinx_build/*
 biosig4python/*
 *.pyc
+.backup
+*.pyc
+.*.sw?
+.project
+.pydevproject

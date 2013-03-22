@@ -321,7 +321,7 @@ def plot_data(data, info, ann=None):
         if ann != None:
             # annotation time in samples from start
             ann_x = (ann[:, 0] - data[0, 0]).astype('int')
-            pylab.plot(ann[:, 1], data[ann_x, sig+1], 'xr')
+            pylab.plot(ann[:, 1], data[ann_x, sig+2], 'xr')
 
     pylab.show()
 
