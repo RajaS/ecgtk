@@ -1069,7 +1069,7 @@ def test():
 
 
 def check_qrs_detection():
-    from wfdbtools import rdsamp
+    from wfdbtools import rdsamp, rdann
     import subprocess
     test_record = '../samples/format212/100'
     qrslead = 2
@@ -1079,8 +1079,20 @@ def check_qrs_detection():
     qrsdetector = QRSDetector(data, info['samp_freq'])
     
     qrspeaks = qrsdetector.qrs_detect(qrslead)
-
+    print 'Found %s QRS complexes' %(len(qrspeaks))
     qrsdetector.write_ann(os.path.abspath(test_record) + '.test')
+
+    ref_qrs = rdann(os.path.abspath(test_record), 'atr')
+    print ref_qrs.shape
+    print qrspeaks[:10]
+    print ref_qrs[:10, :1]
+
+    pylab.plot(data[:, qrslead])
+    for r in qrspeaks:
+        pylab.plot(r, 1.5, 'xr')
+    for r in ref_qrs[:, 1]:
+        pylab.plot(r, 1.8, 'ob')
+    pylab.show()
     
     print subprocess.check_output(['bxb','-r', os.path.abspath(test_record), '-a', 'atr', 'test'])
     
@@ -1107,5 +1119,5 @@ def stitch_test():
 
 
 if __name__ == '__main__':
-    #check_qrs_detection()
-    test()
+    check_qrs_detection()
+    #test()
