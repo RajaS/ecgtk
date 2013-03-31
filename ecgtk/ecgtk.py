@@ -713,7 +713,10 @@ class ECG():
         units should be in mv
         """
         self.data = data
-        self.samplingrate = info['samp_freq'] 
+        try:
+            self.samplingrate = info['samp_freq']
+        except KeyError: # backwards compat
+            self.samplingrate = info['samplingrate']
         self.qrsonsets = None
 
     def remove_baseline(self, anchorx, window, lead=0):
