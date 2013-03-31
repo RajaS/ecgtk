@@ -18,6 +18,9 @@
 #                    second col will be the label
 #   - Load                                               : Load saved marks and labels
 
+###################
+
+# Warning: Quickly hacked together as I need it to use for work
 
 #####################
 import yaml
@@ -40,7 +43,7 @@ from ecgtk import ECG
 ID_LOAD = wx.NewId()
 ID_MARK = wx.NewId()
 ID_SAVE = wx.NewId()
-
+ID_CHANGE_CHANNEL = wx.NewId()
 
 ##################
 
@@ -87,13 +90,14 @@ class Model:
         print 'Loaded ecg'
         if marks_filename != '':
             self.marks = self.load_marks(marks_filename)
-            print 'Loaded marks'
+            print 'Loaded marks', marks_filename
         else:
             print 'No Marks file'
         pub.sendMessage("ECG LOADED", (self.ecg_data[:, self.channel1],
                                        self.ecg_data[:, self.channel2],
                                        self.marks))
 
+        
     def set_data(self, ecg_data, ecg_info, marks):
         """
         Set the data and info
@@ -224,7 +228,13 @@ class View(wx.Frame):
         file_menu.Append(ID_MARK, "&Annotate", "Generate new annotation")
         file_menu.Append(ID_SAVE, "&Save", "Save annotations")
 
+        channel_menu = wx.Menu()
+        channel_menu.Append(ID_CHANGE_CHANNEL, "&Change Chan 1",
+                            "Change channel 1")
+        
         menubar.Append(file_menu, "&File")
+        menubar.Append(channel_menu, "&Channel")
+        
         self.SetMenuBar(menubar)
         
 
@@ -235,7 +245,10 @@ class View(wx.Frame):
         """
         print 'Plotting'
         ecg1, ecg2 = self.remove_overlap(ecg1, ecg2)
-        #ecg1 += (ecg2.max() -  ecg2.min())
+
+        # if zoomed in, maintain x axis zoom
+        minx, maxx =  self.axes.get_xlim()
+
         self.axes.clear()
         self.axes.plot(ecg1, 'b')
         self.axes.plot(ecg2, 'b')
@@ -243,6 +256,10 @@ class View(wx.Frame):
             for samp, label in marks:
                 self.axes.plot(samp, ecg1[samp], 'ok')
                 self.axes.plot(samp, ecg2[samp], 'ok')
+
+        if maxx != 1.0: # which is the default without a plot
+            self.axes.set_xlim(minx, maxx)
+                
         self.canvas.draw()
 
 
@@ -309,6 +326,7 @@ class Controller:
         self.view.Bind(wx.EVT_MENU, self.load_ecg, id=ID_LOAD)
         self.view.Bind(wx.EVT_MENU, self.add_marks, id=ID_MARK)
         self.view.Bind(wx.EVT_MENU, self.save_marks, id=ID_SAVE)
+        self.view.Bind(wx.EVT_MENU, self.change_channel, id=ID_CHANGE_CHANNEL)
 
         
     def load_ecg(self, event):
@@ -316,6 +334,7 @@ class Controller:
         if ecgfile == None:
             return
 
+        self.ecgfile = ecgfile
         extension = os.path.splitext(ecgfile)[1]
         if extension == '.npy':
             formt = 'cust_numpy'
@@ -324,6 +343,7 @@ class Controller:
 
         marks_filename = ecgfile.rstrip(extension) + '.ann'
         if not os.path.exists(marks_filename):
+            print 'Marks file does not exist ', marks_filename
             marks_filename = ''
             
         self.model.load_ecg(ecgfile, formt, marks_filename)
@@ -341,8 +361,10 @@ class Controller:
         """
         Save the current marks to file
         """
-        pass #TODO:
-        
+        extension = os.path.splitext(self.ecgfile)[1]
+        marks_filename = self.ecgfile.rstrip(extension) + '.ann'
+        scipy.save(marks_filename, self.model.marks)
+        print 'saved to ', marks_filename
         
     def load(self, ecg_data, ecg_info={'samp_freq':1000}, ann=None):
         """
@@ -357,6 +379,27 @@ class Controller:
     def set_leads(self, lead1, lead2):
         self.model.channel1 = lead1
         self.model.channel2 = lead2
+
+
+    def change_channel(self, event):
+        """
+        Allow user to change the channel chosen for first lead
+        """
+        current_channel1 = self.model.channel1
+        try:
+            channel_names = self.model.ecg_info['signal_names']
+        except KeyError:
+            channel_names = self.model.ecg_info['channellabels']
+
+        cc = ChannelChooser(self.view, channel_names, current_channel1)
+        if cc.ShowModal() == wx.ID_OK:
+            self.model.channel1 = cc.selected_channel
+            self.view.init_plot(self.model.ecg_data[:, self.model.channel1],
+                                self.model.ecg_data[:, self.model.channel2],
+                                self.model.marks)
+        else:
+            return
+        
         
     def init_plot(self, message):
         #lead1, lead2, marks = message.data
@@ -415,6 +458,58 @@ class CustReader:
         return data, info
 
 
+class ChannelChooser(wx.Dialog):
+    """
+    Dialog to choose a channel
+    """
+    def __init__(self, parent, channel_names, current_channel):
+        """
+        channel_names is a list of strings
+        current_channel is an int
+        """
+        wx.Dialog.__init__(self, parent, -1, 'Choose new channel')
+        self.channel_names = channel_names
+        self.current_channel = current_channel
+
+        panel = wx.Panel(self, -1)
+        panelsizer = wx.BoxSizer(wx.VERTICAL)
+        buttonsizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        # widgets and buttons
+        self.choices = wx.RadioBox(panel, -1, "Choose channel",
+                                   choices = self.channel_names,
+                                   style = wx.RA_VERTICAL)
+        self.cancel_button = wx.Button(panel, -1, 'Cancel')
+        self.done_button = wx.Button(panel, -1, 'Done')
+
+        self.cancel_button.Bind(wx.EVT_BUTTON, self.cancel)
+        self.done_button.Bind(wx.EVT_BUTTON, self.done)
+
+        # add to sizers
+        buttonsizer.Add(self.cancel_button, 0, wx.ALL, 10)
+        buttonsizer.Add(self.done_button, 0, wx.ALL, 10)
+        panelsizer.Add(self.choices, 15, wx.ALL|wx.EXPAND, 2)
+        panelsizer.Add(buttonsizer, 1, wx.ALL, 2)
+
+        panel.SetSizer(panelsizer)
+
+        mainsizer = wx.BoxSizer(wx.HORIZONTAL)
+        mainsizer.Add(panel, 1, wx.EXPAND, 5)
+        mainsizer.Fit(self)
+        self.Layout()
+
+        self.SetSize((300, 500))
+        
+
+    def cancel(self, event):
+        self.EndModal(wx.ID_CANCEL)
+
+
+    def done(self, event):
+        self.selected_channel = self.choices.GetSelection()
+        self.EndModal(wx.ID_OK)
+
+        
 if __name__ == '__main__':
     from  wfdbtools import rdsamp, rdann
     
